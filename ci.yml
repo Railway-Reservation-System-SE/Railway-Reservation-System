@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  CI:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Backend: lint + tests (skipped until backend/package.json exists)
+      - name: Backend install
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: npm install --no-audit --no-fund
+
+      - name: Backend lint
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: npm run lint --if-present
+
+      - name: Backend test
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: npm test --if-present
+
+      # Frontend: lint + build (skipped until frontend/package.json exists)
+      - name: Frontend install
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Frontend lint
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: npm run lint --if-present
+
+      - name: Frontend build
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: npm run build --if-present
