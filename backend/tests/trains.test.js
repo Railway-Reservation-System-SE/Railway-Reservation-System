@@ -27,43 +27,45 @@ beforeAll(() => {
   `);
 });
 
-describe('GET /api/trains', () => {
-  test('returns matching trains for a valid search', async () => {
+describe('GET /trains/search', () => {
+  test('returns matching trains with a classes array', async () => {
     const response = await request(app)
-      .get('/api/trains')
+      .get('/trains/search')
       .query({
         source: 'Bengaluru',
         destination: 'Chennai',
-        travel_date: '2026-11-02',
+        date: '2026-11-02',
       });
 
     expect(response.status).toBe(200);
-    expect(response.body.trains).toHaveLength(1);
-    expect(response.body.trains[0]).toMatchObject({
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({
       number: '12007',
       name: 'Shatabdi Express',
       source: 'Bengaluru',
       destination: 'Chennai',
       travel_date: '2026-11-02',
+      classes: [],
     });
   });
 
   test('matches station names without regard to case', async () => {
     const response = await request(app)
-      .get('/api/trains')
+      .get('/trains/search')
       .query({
         source: 'bengaluru',
         destination: 'chennai',
-        travel_date: '2026-11-02',
+        date: '2026-11-02',
       });
 
     expect(response.status).toBe(200);
-    expect(response.body.trains).toHaveLength(1);
+    expect(response.body).toHaveLength(1);
   });
 
   test('returns 400 when required parameters are missing', async () => {
     const response = await request(app)
-      .get('/api/trains')
+      .get('/trains/search')
       .query({ source: 'Bengaluru' });
 
     expect(response.status).toBe(400);
@@ -72,27 +74,27 @@ describe('GET /api/trains', () => {
 
   test('returns 400 for an invalid date format', async () => {
     const response = await request(app)
-      .get('/api/trains')
+      .get('/trains/search')
       .query({
         source: 'Bengaluru',
         destination: 'Chennai',
-        travel_date: '02-11-2026',
+        date: '02-11-2026',
       });
 
     expect(response.status).toBe(400);
   });
 
-  test('returns an empty list when no trains match', async () => {
+  test('returns an empty array when no trains match', async () => {
     const response = await request(app)
-      .get('/api/trains')
+      .get('/trains/search')
       .query({
         source: 'Bengaluru',
         destination: 'Chennai',
-        travel_date: '2026-11-30',
+        date: '2026-11-30',
       });
 
     expect(response.status).toBe(200);
-    expect(response.body.trains).toEqual([]);
+    expect(response.body).toEqual([]);
   });
 });
 
