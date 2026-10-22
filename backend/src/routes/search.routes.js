@@ -40,9 +40,8 @@ router.get('/search', (req, res) => {
     const getClasses = db.prepare(`
       SELECT
         class_name,
-        total_seats,
-        booked_seats,
-        MAX(total_seats - booked_seats, 0) AS available_seats
+        fare,
+        MAX(total_seats - booked_seats, 0) AS seatsAvailable
       FROM train_classes
       WHERE train_id = ?
       ORDER BY
@@ -58,9 +57,8 @@ router.get('/search', (req, res) => {
       ...train,
       classes: getClasses.all(train.id).map((trainClass) => ({
         class_name: trainClass.class_name,
-        total_seats: trainClass.total_seats,
-        booked_seats: trainClass.booked_seats,
-        available_seats: trainClass.available_seats,
+        seatsAvailable: trainClass.seatsAvailable,
+        fare: trainClass.fare,
       })),
     }));
 

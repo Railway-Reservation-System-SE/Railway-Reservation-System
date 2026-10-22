@@ -40,7 +40,7 @@ beforeAll(() => {
 });
 
 describe('GET /trains/search', () => {
-  test('returns matching trains with class seat availability', async () => {
+  test('returns classes with seatsAvailable and numeric fare', async () => {
     const response = await request(app)
       .get('/trains/search')
       .query({
@@ -59,24 +59,59 @@ describe('GET /trains/search', () => {
       classes: [
         {
           class_name: 'SL',
-          total_seats: 100,
-          booked_seats: 40,
-          available_seats: 60,
+          seatsAvailable: 60,
+          fare: 350,
         },
         {
           class_name: '3A',
-          total_seats: 60,
-          booked_seats: 18,
-          available_seats: 42,
+          seatsAvailable: 42,
+          fare: 750,
         },
         {
           class_name: '2A',
-          total_seats: 30,
-          booked_seats: 30,
-          available_seats: 0,
+          seatsAvailable: 0,
+          fare: 1100,
         },
       ],
     });
+
+    for (const trainClass of response.body[0].classes) {
+      expect(typeof trainClass.seatsAvailable).toBe('number');
+      expect(typeof trainClass.fare).toBe('number');
+      expect(trainClass).not.toHaveProperty('total_seats');
+      expect(trainClass).not.toHaveProperty('booked_seats');
+      expect(trainClass).not.toHaveProperty('available_seats');
+    }
+  });
+
+  test('clamps availability to zero when booked seats exceed total seats', async () => {
+    db.prepare(`
+      INSERT INTO train_classes
+        (train_id, class_name, fare, total_seats, booked_seats)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(2, 'SL', 400, 10, 15);
+
+    try {
+      const response = await request(app)
+        .get('/trains/search')
+        .query({
+          source: 'Bengaluru',
+          destination: 'Chennai',
+          date: '2026-11-02',
+        });
+
+      const train = response.body.find((item) => item.number === '12008');
+
+      expect(response.status).toBe(200);
+      expect(train.classes).toHaveLength(1);
+      expect(train.classes[0]).toMatchObject({
+        class_name: 'SL',
+        seatsAvailable: 0,
+        fare: 400,
+      });
+    } finally {
+      db.prepare('DELETE FROM train_classes WHERE train_id = ?').run(2);
+    }
   });
 
   test('returns an empty classes array when a train has no class records', async () => {
@@ -88,13 +123,11 @@ describe('GET /trains/search', () => {
         date: '2026-11-02',
       });
 
-    const trainWithoutClasses = response.body.find(
-      (train) => train.number === '12008'
-    );
+    const train = response.body.find((item) => item.number === '12008');
 
     expect(response.status).toBe(200);
-    expect(trainWithoutClasses).toBeDefined();
-    expect(trainWithoutClasses.classes).toEqual([]);
+    expect(train).toBeDefined();
+    expect(train.classes).toEqual([]);
   });
 
   test('matches station names without regard to case', async () => {
