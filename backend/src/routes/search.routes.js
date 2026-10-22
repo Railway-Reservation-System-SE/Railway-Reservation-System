@@ -37,12 +37,32 @@ router.get('/search', (req, res) => {
       ORDER BY t.number ASC
     `).all(source, destination, date);
 
-    return res.status(200).json(
-      trains.map((train) => ({
-        ...train,
-        classes: [],
-      }))
-    );
+    const getClasses = db.prepare(`
+      SELECT
+        class_name,
+        fare,
+        MAX(total_seats - booked_seats, 0) AS seatsAvailable
+      FROM train_classes
+      WHERE train_id = ?
+      ORDER BY
+        CASE class_name
+          WHEN 'SL' THEN 1
+          WHEN '3A' THEN 2
+          WHEN '2A' THEN 3
+          ELSE 4
+        END
+    `);
+
+    const result = trains.map((train) => ({
+      ...train,
+      classes: getClasses.all(train.id).map((trainClass) => ({
+        class_name: trainClass.class_name,
+        seatsAvailable: trainClass.seatsAvailable,
+        fare: trainClass.fare,
+      })),
+    }));
+
+    return res.status(200).json(result);
   } catch (error) {
     console.error('Train search failed:', error.message);
     return res.status(500).json({ error: 'Unable to search trains' });
