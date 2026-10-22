@@ -6,10 +6,11 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const searchRoutes = require('./routes/search.routes');
 
 app.use(cors());
 app.use(express.json());
-
+app.use('/trains', searchRoutes);
 // Health-check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
