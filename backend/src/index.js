@@ -11,6 +11,8 @@ const searchRoutes = require('./routes/search.routes');
 app.use(cors());
 app.use(express.json());
 app.use('/trains', searchRoutes);
+app.use('/auth', require('./routes/auth.routes'));
+
 // Health-check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
