@@ -15,34 +15,34 @@ jobs:
         with:
           node-version: 20
 
-      # Backend: lint + tests (skipped until backend/package.json exists)
+      # Backend: lint + tests (skipped only while backend/package.json does not exist yet)
       - name: Backend install
         if: hashFiles('backend/package.json') != ''
         working-directory: backend
-        run: npm install --no-audit --no-fund
+        run: npm ci
 
       - name: Backend lint
         if: hashFiles('backend/package.json') != ''
         working-directory: backend
-        run: npm run lint --if-present
+        run: npm run lint
 
       - name: Backend test
         if: hashFiles('backend/package.json') != ''
         working-directory: backend
-        run: npm test --if-present
+        run: npm test
 
-      # Frontend: lint + build (skipped until frontend/package.json exists)
+      # Frontend: lint + build (skipped only while frontend/package.json does not exist yet)
       - name: Frontend install
         if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
-        run: npm install --no-audit --no-fund
+        run: npm ci
 
       - name: Frontend lint
         if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
-        run: npm run lint --if-present
+        run: npm run lint
 
       - name: Frontend build
         if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
-        run: npm run build --if-present
+        run: npm run build
