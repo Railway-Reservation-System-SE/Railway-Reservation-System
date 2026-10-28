@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
 
@@ -9,6 +11,11 @@ describe('POST /admin/trains (RRS-F-050)', () => {
   // /admin/* requires a logged-in user (RRS-SR-002). Role checks come with RRS-SR-004.
   const adminToken = () => jwt.sign({ userId: 1, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1h' });
   const createdIds = [];
+
+  // Create the schema so this suite does not depend on another suite running first.
+  beforeAll(() => {
+    db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8'));
+  });
 
   afterAll(() => {
     for (const id of createdIds) {
