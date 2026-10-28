@@ -1,13 +1,14 @@
 const express = require('express');
 const db = require('../db');
+const auth = require('../middleware/auth');
 
 const router = express.Router();
 
 const present = (v) => typeof v === 'string' && v.trim() !== '';
 
 // RRS-F-050: admin adds a new train with its classes.
-// Auth + admin-only checks are added by RRS-SR-004.
-router.post('/trains', (req, res) => {
+// Login required (RRS-SR-002). The admin-role check is added by RRS-SR-004.
+router.post('/trains', auth, (req, res) => {
   const { number, name, source, destination, travelDate, classes } = req.body || {};
 
   if (![number, name, source, destination, travelDate].every(present)) {
