@@ -131,4 +131,34 @@ router.delete('/trains/:id', (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+// RRS-F-052: list every booking (CONFIRMED and CANCELLED) for one train.
+router.get('/trains/:id/bookings', (req, res) => {
+  const id = Number(req.params.id);
+  const train = db.prepare('SELECT id FROM trains WHERE id = ?').get(id);
+  if (!train) {
+    return res.status(404).json({ error: 'Train not found' });
+  }
+
+  const rows = db
+    .prepare('SELECT * FROM bookings WHERE train_id = ? ORDER BY created_at DESC, id DESC')
+    .all(id);
+
+  const bookings = rows.map((b) => {
+    let passengers = [];
+    try {
+      passengers = JSON.parse(b.passengers_json);
+    } catch (err) {
+      passengers = [];
+    }
+    return {
+      pnr: b.pnr,
+      passengerNames: passengers.map((p) => p.name),
+      classType: b.class_name,
+      status: b.status,
+      farePaid: b.fare_paid,
+    };
+  });
+
+  return res.status(200).json(bookings);
+});
 module.exports = router;
