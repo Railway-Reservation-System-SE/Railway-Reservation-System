@@ -104,5 +104,31 @@ router.put('/trains/:id', (req, res) => {
     }
     return res.status(500).json({ error: 'Internal server error' });
   }
+});// RRS-F-051: delete a train unless it has CONFIRMED bookings.
+router.delete('/trains/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const train = db.prepare('SELECT id FROM trains WHERE id = ?').get(id);
+  if (!train) {
+    return res.status(404).json({ error: 'Train not found' });
+  }
+
+  const active = db
+    .prepare("SELECT COUNT(*) AS n FROM bookings WHERE train_id = ? AND status = 'CONFIRMED'")
+    .get(id).n;
+  if (active > 0) {
+    return res.status(409).json({ error: 'Train has active bookings' });
+  }
+
+  const remove = db.transaction(() => {
+    db.prepare('DELETE FROM train_classes WHERE train_id = ?').run(id);
+    db.prepare('DELETE FROM trains WHERE id = ?').run(id);
+  });
+
+  try {
+    remove();
+    return res.status(200).json({ message: 'Train deleted' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 module.exports = router;
