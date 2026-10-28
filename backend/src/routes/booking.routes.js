@@ -13,7 +13,9 @@ router.post('/', auth, (req, res) => {
   const { trainId, classType, travelDate, passengers } = req.body || {};
 
   if (
-    !Number.isInteger(Number(trainId)) ||
+    !['string', 'number'].includes(typeof trainId) ||
+    (typeof trainId === 'string' && !/^\d+$/.test(trainId)) ||
+    !Number.isSafeInteger(Number(trainId)) ||
     trainId === null ||
     trainId === '' ||
     !present(classType) ||
@@ -31,9 +33,8 @@ router.post('/', auth, (req, res) => {
     (p) =>
       p &&
       present(p.name) &&
-      p.age !== undefined &&
-      p.age !== null &&
-      p.age !== '' &&
+      typeof p.age === 'number' &&
+      Number.isFinite(p.age) &&
       present(p.gender)
   );
   if (!validPassengers) {
