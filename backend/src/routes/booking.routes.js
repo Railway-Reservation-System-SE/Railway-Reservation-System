@@ -8,6 +8,7 @@ const present = (v) => typeof v === 'string' && v.trim() !== '';
 
 // RRS-F-020: validate a booking request and look up the train class.
 // Seat check, payment, PNR and concurrency guard are added by the next booking items.
+// Passenger age range checks belong to RRS-SR-003.
 router.post('/', auth, (req, res) => {
   const { trainId, classType, travelDate, passengers } = req.body || {};
 
@@ -30,8 +31,9 @@ router.post('/', auth, (req, res) => {
     (p) =>
       p &&
       present(p.name) &&
-      Number.isInteger(p.age) &&
-      p.age > 0 &&
+      p.age !== undefined &&
+      p.age !== null &&
+      p.age !== '' &&
       present(p.gender)
   );
   if (!validPassengers) {
@@ -51,8 +53,9 @@ router.post('/', auth, (req, res) => {
     return res.status(404).json({ error: 'Train/class not found' });
   }
 
-  // Later items extend this handler; for now report the matched class.
-  return res.status(200).json({ trainClassId: trainClass.id });
+  // Interim: the request is valid and the class exists, but nothing is booked yet.
+  // Seat check, payment and confirmation (201) are added by RRS-F-021/022/023.
+  return res.status(501).json({ error: 'Booking not implemented yet' });
 });
 
 module.exports = router;

@@ -87,10 +87,14 @@ describe('POST /bookings (RRS-F-020)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('accepts a valid request with 1 to 4 passengers', async () => {
+  it('passes validation for 1 to 4 passengers but does not book yet (501)', async () => {
     const one = await post(validBody());
-    expect(one.status).toBe(200);
+    expect(one.status).toBe(501);
+    expect(one.body).toEqual({ error: 'Booking not implemented yet' });
     const four = await post({ ...validBody(), passengers: Array(4).fill(passenger) });
-    expect(four.status).toBe(200);
+    expect(four.status).toBe(501);
+    // Nothing is written yet.
+    expect(db.prepare('SELECT COUNT(*) AS n FROM bookings WHERE train_id = ?').get(trainId).n).toBe(0);
+    expect(db.prepare('SELECT booked_seats FROM train_classes WHERE train_id = ?').get(trainId).booked_seats).toBe(0);
   });
 });
