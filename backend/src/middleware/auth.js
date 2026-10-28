@@ -15,6 +15,14 @@ function auth(req, res, next) {
 
   try {
     const decoded = jwt.verify(match[1], process.env.JWT_SECRET);
+    if (
+      !decoded ||
+      !Number.isSafeInteger(decoded.userId) ||
+      decoded.userId <= 0 ||
+      !['passenger', 'admin'].includes(decoded.role)
+    ) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     req.user = { id: decoded.userId, role: decoded.role };
     return next();
   } catch (err) {

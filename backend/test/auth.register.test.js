@@ -65,3 +65,27 @@ describe('POST /auth/register', () => {
     }
   });
 });
+
+// Password length is measured in UTF-8 bytes, not JavaScript characters.
+describe('bcrypt password boundary', () => {
+  it.each(['x'.repeat(73), 'é'.repeat(37)])('rejects an over-72-byte password', async (password) => {
+    const res = await request(app).post('/auth/register').send({ name: 'Boundary', email: EMAIL, password });
+    expect(res.status).toBe(400);
+    expect(db.prepare('SELECT id FROM users WHERE email = ?').get(EMAIL)).toBeUndefined();
+  });
+
+  it('accepts exactly 72 bytes and stores a usable hash', async () => {
+    const password = 'é'.repeat(36);
+    const res = await request(app).post('/auth/register').send({ name: 'Boundary', email: EMAIL, password });
+    expect(res.status).toBe(201);
+    const row = db.prepare('SELECT password_hash FROM users WHERE email = ?').get(EMAIL);
+    expect(require('bcrypt').compareSync(password, row.password_hash)).toBe(true);
+  });
+
+  it('handles concurrent duplicate registration with one account and one 409', async () => {
+    const body = { name: 'Concurrent', email: EMAIL, password: 'secret123' };
+    const responses = await Promise.all([request(app).post('/auth/register').send(body), request(app).post('/auth/register').send(body)]);
+    expect(responses.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM users WHERE email = ?').get(EMAIL).n).toBe(1);
+  });
+});

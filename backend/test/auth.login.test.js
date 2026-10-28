@@ -67,3 +67,24 @@ describe('POST /auth/login', () => {
     }
   });
 });
+
+describe('login input boundaries', () => {
+  it.each([{}, { email: EMAIL }, { email: EMAIL, password: null }, { email: [EMAIL], password: PASSWORD }, { email: EMAIL, password: {} }])('returns generic 401 for malformed input', async (body) => {
+    const res = await request(app).post('/auth/login').send(body);
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: 'Invalid credentials' });
+  });
+
+  it('rejects an overlong password even if bcrypt would match its first 72 bytes', async () => {
+    const email = 'long-login@example.test';
+    const prefix = 'x'.repeat(72);
+    db.prepare('INSERT INTO users (name,email,password_hash,role) VALUES (?,?,?,?)').run('Legacy Long', email, bcrypt.hashSync(prefix + 'A', 4), 'passenger');
+    try {
+      const res = await request(app).post('/auth/login').send({ email, password: prefix + 'B' });
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({ error: 'Invalid credentials' });
+    } finally {
+      db.prepare('DELETE FROM users WHERE email = ?').run(email);
+    }
+  });
+});
