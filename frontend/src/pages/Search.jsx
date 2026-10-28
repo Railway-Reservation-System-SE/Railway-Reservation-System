@@ -8,6 +8,7 @@ export default function Search() {
   const [destination, setDestination] = useState('');
   const [date, setDate] = useState('');
   const [trains, setTrains] = useState([]);
+  const [searchedDate, setSearchedDate] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,6 +30,7 @@ export default function Search() {
     try {
       const results = await api(`/trains/search?${params.toString()}`);
       setTrains(results);
+      setSearchedDate(date);
       setHasSearched(true);
     } catch (err) {
       setError(err.message || 'Unable to search trains. Please try again.');
@@ -106,7 +108,7 @@ export default function Search() {
         <section className="search-results" aria-label="Train search results">
           <h2>Available trains ({trains.length})</h2>
           {trains.map((train) => (
-            <TrainCard key={train.id} train={train} date={date} />
+            <TrainCard key={train.id} train={train} date={searchedDate} />
           ))}
         </section>
       )}

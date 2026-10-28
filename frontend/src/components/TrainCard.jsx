@@ -1,5 +1,6 @@
 
 import { Link } from 'react-router-dom';
+import { buildBookingUrl } from '../utils/bookingUrl';
 
 export default function TrainCard({ train, date }) {
   return (
@@ -28,7 +29,7 @@ export default function TrainCard({ train, date }) {
 
             <Link
               className="train-class__book"
-              to={`/booking/${train.id}?class=${encodeURIComponent(trainClass.class_name)}&date=${encodeURIComponent(date)}`}
+              to={buildBookingUrl(train.id, trainClass.class_name, date)}
             >
               Book
             </Link>
