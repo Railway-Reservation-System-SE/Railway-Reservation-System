@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const db = require('../db');
 
 const router = express.Router();
@@ -36,6 +37,37 @@ router.post('/register', async (req, res) => {
     }
     return res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// RRS-F-002: login with email + password, returns a 2h JWT.
+router.post('/login', async (req, res) => {
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ error: 'Server misconfigured' });
+  }
+  const { email, password } = req.body || {};
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const user = db
+    .prepare('SELECT id, name, email, role, password_hash FROM users WHERE email = ?')
+    .get(email);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const ok = await bcrypt.compare(password, user.password_hash);
+  if (!ok) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: '2h',
+  });
+  return res.status(200).json({
+    token,
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+  });
 });
 
 module.exports = router;
