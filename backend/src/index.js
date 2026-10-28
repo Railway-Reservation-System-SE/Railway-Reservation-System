@@ -13,6 +13,7 @@ app.use(express.json());
 app.use('/trains', searchRoutes);
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/admin', require('./routes/admin.routes'));
+app.use('/bookings', require('./routes/booking.routes'));
 // Health-check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
