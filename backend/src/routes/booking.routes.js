@@ -1,3 +1,4 @@
+const { simulatePayment } = require('../utils/payment');
 const express = require('express');
 const db = require('../db');
 const auth = require('../middleware/auth');
@@ -62,7 +63,12 @@ router.post('/', auth, (req, res) => {
   const seatsAvailable = trainClass.total_seats - trainClass.booked_seats;
   if (passengers.length > seatsAvailable) {
     return res.status(409).json({ error: 'Not enough seats available' });
+  }  // RRS-F-022: simulated payment (runs only after the seat check passed).
+  const payment = simulatePayment(req.body.paymentMethod, trainClass.fare, passengers.length);
+  if (!payment.ok) {
+    return res.status(400).json({ error: 'paymentMethod must be card or upi' });
   }
+  // payment.totalFare (fare x passengers) is used by RRS-F-023 for fare_paid.
 
   // Interim: the request is valid and the class exists, but nothing is booked yet.
   // Seat check, payment and confirmation (201) are added by RRS-F-021/022/023.
