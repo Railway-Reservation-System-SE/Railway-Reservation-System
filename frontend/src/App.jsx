@@ -2,6 +2,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import Search from './pages/Search';
+import Register from './pages/Register';
+import Login from './pages/Login';
 
 function Placeholder({ title }) {
   return (
@@ -18,8 +20,8 @@ export default function App() {
       <NavBar />
       <Routes>
         <Route path="/" element={<Placeholder title="Home" />} />
-        <Route path="/login" element={<Placeholder title="Login" />} />
-        <Route path="/register" element={<Placeholder title="Register" />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/search" element={<Search />} />
         <Route path="/booking/:trainId" element={<Placeholder title="Book Train" />} />
         <Route path="/bookings" element={<Placeholder title="My Bookings" />} />
