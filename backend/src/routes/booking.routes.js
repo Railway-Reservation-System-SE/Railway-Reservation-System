@@ -58,6 +58,10 @@ router.post('/', auth, (req, res) => {
 
   if (!trainClass) {
     return res.status(404).json({ error: 'Train/class not found' });
+  }  // RRS-F-021: reject before payment or any DB write if there aren't enough seats.
+  const seatsAvailable = trainClass.total_seats - trainClass.booked_seats;
+  if (passengers.length > seatsAvailable) {
+    return res.status(409).json({ error: 'Not enough seats available' });
   }
 
   // Interim: the request is valid and the class exists, but nothing is booked yet.
