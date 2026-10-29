@@ -13,7 +13,13 @@ beforeAll(() => {
   db.prepare('INSERT INTO train_classes(train_id,class_name,fare,total_seats) VALUES(?,?,?,?)').run(1, 'SL', 100, 4);
 });
 afterAll(() => db.close());
-const body = () => ({ trainId: 1, classType: 'SL', travelDate: '2099-01-01', passengers: [{ name: 'Traveller', age: 30, gender: 'F' }] });
+const body = () => ({
+  trainId: 1,
+  classType: 'SL',
+  travelDate: '2099-01-01',
+  passengers: [{ name: 'Traveller', age: 30, gender: 'F' }],
+  paymentMethod: 'card',
+});
 const post = (data) => request(app).post('/bookings').set('Authorization', `Bearer ${jwt.sign({ userId: 1, role: 'passenger' }, process.env.JWT_SECRET)}`).send(data);
 
 describe('SR003 shared validator primitives', () => {

@@ -17,7 +17,13 @@ beforeAll(() => {
 });
 afterAll(() => db.close());
 
-const payload = { trainId: 1, classType: 'SL', travelDate: '2031-01-01', passengers: [{ name: 'Traveller', age: 30, gender: 'F' }] };
+const payload = {
+  trainId: 1,
+  classType: 'SL',
+  travelDate: '2031-01-01',
+  passengers: [{ name: 'Traveller', age: 30, gender: 'F' }],
+  paymentMethod: 'card',
+};
 
 describe('TC-Reg-01 / TC-Auth-01 integration with RRS-F-020', () => {
   it('registers, immediately logs in and uses the issued token on a protected route', async () => {
