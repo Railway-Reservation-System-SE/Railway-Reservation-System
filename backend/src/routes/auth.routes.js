@@ -75,4 +75,53 @@ router.post('/login', async (req, res) => {
   });
 });
 
+// RRS-F-004: local classroom simulation, not real email delivery.
+router.post('/request-password-reset', (req, res) => {
+  const response = { message: 'If the account exists, a reset link has been generated' };
+  const { email } = req.body || {};
+  if (typeof email !== 'string' || !email.trim()) return res.status(200).json(response);
+  if (!process.env.JWT_SECRET) {
+    console.error('Password reset unavailable: JWT_SECRET is not configured');
+    return res.status(200).json(response);
+  }
+  try {
+    const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (user) {
+      const resetToken = jwt.sign({ userId: user.id, purpose: 'reset' }, process.env.JWT_SECRET, { expiresIn: '15m' });
+      // Intentional local-only simulation required by the execution plan.
+      // Never expose this log in a public deployment or return the token in JSON.
+      console.log(`Password reset (simulated email): http://localhost:5173/reset-password?token=${resetToken}`);
+    }
+  } catch {
+    console.error('Password reset request failed');
+  }
+  return res.status(200).json(response);
+});
+
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body || {};
+  if (typeof token !== 'string' || !token || typeof newPassword !== 'string' ||
+      !newPassword.trim() || newPassword.length < 6 || Buffer.byteLength(newPassword, 'utf8') > 72) {
+    return res.status(400).json({ error: 'A reset token and password of at least 6 characters, at most 72 UTF-8 bytes, are required' });
+  }
+  if (!process.env.JWT_SECRET) return res.status(500).json({ error: 'Server misconfigured' });
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (!payload || payload.purpose !== 'reset' || !Number.isSafeInteger(payload.userId) || payload.userId <= 0) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+  } catch {
+    return res.status(400).json({ error: 'Invalid or expired reset token' });
+  }
+  try {
+    const hash = await bcrypt.hash(newPassword, 10);
+    const result = db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, payload.userId);
+    if (result.changes !== 1) return res.status(400).json({ error: 'Invalid or expired reset token' });
+    return res.status(200).json({ message: 'Password updated' });
+  } catch {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
