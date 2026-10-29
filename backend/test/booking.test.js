@@ -100,6 +100,11 @@ describe('POST /bookings (RRS-F-020)', () => {
 });
 
 describe('booking request type boundaries', () => {
+  it.each([0, -1, '0', '-1'])('rejects a non-positive trainId (%s)', async (trainId) => {
+    const res = await post({ ...validBody(), trainId });
+    expect(res.status).toBe(400);
+  });
+
   it.each([[1], { id: 1 }, true, false, null, ' ', '1.5'])('rejects a non-integer/scalar trainId shape', async (trainId) => {
     const res = await post({ ...validBody(), trainId });
     expect(res.status).toBe(400);

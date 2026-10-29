@@ -16,6 +16,7 @@ router.post('/', auth, (req, res) => {
     !['string', 'number'].includes(typeof trainId) ||
     (typeof trainId === 'string' && !/^\d+$/.test(trainId)) ||
     !Number.isSafeInteger(Number(trainId)) ||
+    Number(trainId) <= 0 ||
     trainId === null ||
     trainId === '' ||
     !present(classType) ||
