@@ -20,6 +20,11 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'password must be at least 6 characters' });
   }
 
+  // bcrypt only uses the first 72 UTF-8 bytes. Never silently truncate a password.
+  if (Buffer.byteLength(password, 'utf8') > 72) {
+    return res.status(400).json({ error: 'password must be at most 72 UTF-8 bytes' });
+  }
+
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
   if (existing) {
     return res.status(409).json({ error: 'Email already registered' });
@@ -45,7 +50,7 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'Server misconfigured' });
   }
   const { email, password } = req.body || {};
-  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password || Buffer.byteLength(password, 'utf8') > 72) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 

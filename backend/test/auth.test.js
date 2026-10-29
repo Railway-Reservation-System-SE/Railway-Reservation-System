@@ -63,3 +63,16 @@ describe('JWT auth middleware (RRS-SR-002)', () => {
     }
   });
 });
+
+describe('JWT claims validation', () => {
+  it.each([{}, { userId: 1 }, { role: 'passenger' }, { userId: 0, role: 'admin' }, { userId: -1, role: 'passenger' }, { userId: '1', role: 'passenger' }, { userId: 1, role: 'superadmin' }])('rejects a signed token with invalid identity claims', async (claims) => {
+    const res = await request(app).get('/protected').set('Authorization', `Bearer ${sign(claims)}`);
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: 'Unauthorized' });
+  });
+  it('accepts a valid passenger identity', async () => {
+    const res = await request(app).get('/protected').set('Authorization', `Bearer ${sign({ userId: 1, role: 'passenger' })}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ user: { id: 1, role: 'passenger' } });
+  });
+});

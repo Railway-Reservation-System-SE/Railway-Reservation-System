@@ -98,3 +98,30 @@ describe('POST /bookings (RRS-F-020)', () => {
     expect(db.prepare('SELECT booked_seats FROM train_classes WHERE train_id = ?').get(trainId).booked_seats).toBe(0);
   });
 });
+
+describe('booking request type boundaries', () => {
+  it.each([0, -1, '0', '-1'])('rejects a non-positive trainId (%s)', async (trainId) => {
+    const res = await post({ ...validBody(), trainId });
+    expect(res.status).toBe(400);
+  });
+
+  it.each([[1], { id: 1 }, true, false, null, ' ', '1.5'])('rejects a non-integer/scalar trainId shape', async (trainId) => {
+    const res = await post({ ...validBody(), trainId });
+    expect(res.status).toBe(400);
+  });
+
+  it.each([{}, [], true, '30', null])('rejects a non-numeric passenger age', async (age) => {
+    const res = await post({ ...validBody(), passengers: [{ ...passenger, age }] });
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts a numeric-string trainId and does not invent an infant-age restriction', async () => {
+    const res = await post({ ...validBody(), trainId: String(trainId), passengers: [{ ...passenger, age: 0 }] });
+    expect(res.status).toBe(501);
+  });
+
+  it.each([null, 'passengers', {}, [null]])('rejects a malformed passenger collection', async (passengers) => {
+    const res = await post({ ...validBody(), passengers });
+    expect(res.status).toBe(400);
+  });
+});
