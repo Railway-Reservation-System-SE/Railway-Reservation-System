@@ -6,7 +6,7 @@ const db = require('../src/db');
 describe('POST /bookings seat check (RRS-F-021)', () => {
   const email = `f021-${Date.now()}@test.com`;
   let token;
-  let userId;
+  let userId
   let trainId;
 
   const payload = (count) => ({
@@ -14,6 +14,7 @@ describe('POST /bookings seat check (RRS-F-021)', () => {
     classType: 'SL',
     travelDate: '2030-04-01',
     passengers: Array.from({ length: count }, (_, i) => ({ name: `Passenger ${i}`, age: 30, gender: 'M' })),
+    paymentMethod: 'card',
   });
   const book = (count) =>
     request(app).post('/bookings').set('Authorization', `Bearer ${token}`).send(payload(count));
@@ -53,8 +54,9 @@ describe('POST /bookings seat check (RRS-F-021)', () => {
   });
 
   test('exactly the remaining seats is not rejected for seats', async () => {
-    const res = await book(2);
-    expect(res.status).not.toBe(409);
-    expect(res.status).not.toBe(400);
-  });
+  const res = await book(2);
+  console.log('EXACT SEATS RESPONSE:', res.status, res.body);
+  expect(res.status).not.toBe(409);
+  expect(res.status).not.toBe(400);
+});
 });
