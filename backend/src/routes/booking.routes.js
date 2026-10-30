@@ -56,17 +56,20 @@ router.post('/', auth, (req, res) => {
        WHERE tc.train_id = ? AND tc.class_name = ? AND t.travel_date = ?`
     )
     .get(Number(trainId), classType, travelDate);
-
   if (!trainClass) {
     return res.status(404).json({ error: 'Train/class not found' });
-  }  // RRS-F-021: reject before payment or any DB write if there aren't enough seats.
+  }
+
+  // RRS-F-021: reject before payment or any DB write if there aren't enough seats.
   const seatsAvailable = trainClass.total_seats - trainClass.booked_seats;
   if (passengers.length > seatsAvailable) {
     return res.status(409).json({ error: 'Not enough seats available' });
-  }  // RRS-F-022: simulated payment (runs only after the seat check passed).
+  }
+
+  // RRS-F-022: simulated payment (runs only after the seat check passed).
   const payment = simulatePayment(req.body.paymentMethod, trainClass.fare, passengers.length);
   if (!payment.ok) {
-    return res.status(400).json({ error: 'paymentMethod must be card or upi' });
+    return res.status(400).json({ error: 'paymentMethod must be card, upi or netbanking' });
   }
   // payment.totalFare (fare x passengers) is used by RRS-F-023 for fare_paid.
 
