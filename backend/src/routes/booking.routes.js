@@ -1,4 +1,5 @@
 const { simulatePayment } = require('../utils/payment');
+const { confirmBooking } = require('../utils/confirmBooking');
 const express = require('express');
 const db = require('../db');
 const auth = require('../middleware/auth');
@@ -9,7 +10,7 @@ const router = express.Router();
 const present = isNonEmptyString;
 
 // RRS-F-020: validate a booking request and look up the train class.
-// Seat check, payment, PNR and concurrency guard are added by the next booking items.
+// Seat check and payment run below; confirmation is RRS-F-023.
 // RRS-SR-003 booking half validates dates/ages and strips basic tags from names.
 router.post('/', auth, (req, res) => {
   const { trainId, classType, travelDate, passengers } = req.body || {};
@@ -71,11 +72,21 @@ router.post('/', auth, (req, res) => {
   if (!payment.ok) {
     return res.status(400).json({ error: 'paymentMethod must be card, upi or netbanking' });
   }
-  // payment.totalFare (fare x passengers) is used by RRS-F-023 for fare_paid.
-
-  // Interim: the request is valid and the class exists, but nothing is booked yet.
-  // Seat check, payment and confirmation (201) are added by RRS-F-021/022/023.
-  return res.status(501).json({ error: 'Booking not implemented yet' });
+  // RRS-F-023: payment succeeded, so take the seats and write the booking in one
+  // transaction. If the last seat went to someone else first, nothing is written.
+  const result = confirmBooking({
+    userId: req.user.id,
+    classId: trainClass.id,
+    trainId: trainClass.train_id,
+    className: classType,
+    travelDate,
+    passengers: req.body.passengers,
+    farePaid: payment.totalFare,
+  });
+  if (!result) {
+    return res.status(409).json({ error: 'Seat no longer available' });
+  }
+  return res.status(201).json({ pnr: result.pnr, status: 'CONFIRMED', farePaid: payment.totalFare });
 });
 
 module.exports = router;

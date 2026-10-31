@@ -36,12 +36,12 @@ describe('TC-Reg-01 / TC-Auth-01 integration with RRS-F-020', () => {
     expect(login.body.user.id).toBe(registered.body.id);
     expect(JSON.stringify([registered.body, login.body])).not.toMatch(/password/i);
     const res = await request(app).post('/bookings').set('Authorization', `Bearer ${login.body.token}`).send(payload);
-    expect(res.status).toBe(501); // Validation only; confirmation is the later F-023 item.
-    expect(db.prepare('SELECT COUNT(*) AS n FROM bookings').get().n).toBe(0);
-    expect(db.prepare('SELECT booked_seats FROM train_classes WHERE id=1').get().booked_seats).toBe(0);
+    expect(res.status).toBe(201); // RRS-F-023: the finished route confirms the booking.
+    expect(db.prepare('SELECT COUNT(*) AS n FROM bookings').get().n).toBe(1);
+    expect(db.prepare('SELECT booked_seats FROM train_classes WHERE id=1').get().booked_seats).toBe(1);
     // Browser logout removes local state only; a copied token has no server revocation.
     const replay = await request(app).post('/bookings').set('Authorization', `Bearer ${login.body.token}`).send(payload);
-    expect(replay.status).toBe(501);
+    expect(replay.status).toBe(201);
   });
 
   it.each([

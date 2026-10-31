@@ -7,8 +7,13 @@ process.env.DATABASE_PATH = ':memory:';
 process.env.JWT_SECRET = 'validation-test-only';
 const app = require('../src/index');
 const db = require('../src/db');
+let valUserId;
 beforeAll(() => {
   db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8'));
+  valUserId = Number(
+    db.prepare('INSERT INTO users(name,email,password_hash) VALUES(?,?,?)')
+      .run('Validation Tester', `val-${Date.now()}@example.test`, 'x').lastInsertRowid
+  );
   db.prepare('INSERT INTO trains(number,name,source,destination,travel_date) VALUES(?,?,?,?,?)').run('VAL', 'Validation', 'A', 'B', '2099-01-01');
   db.prepare('INSERT INTO train_classes(train_id,class_name,fare,total_seats) VALUES(?,?,?,?)').run(1, 'SL', 100, 4);
 });
@@ -20,7 +25,7 @@ const body = () => ({
   passengers: [{ name: 'Traveller', age: 30, gender: 'F' }],
   paymentMethod: 'card',
 });
-const post = (data) => request(app).post('/bookings').set('Authorization', `Bearer ${jwt.sign({ userId: 1, role: 'passenger' }, process.env.JWT_SECRET)}`).send(data);
+const post = (data) => request(app).post('/bookings').set('Authorization', `Bearer ${jwt.sign({ userId: valUserId, role: 'passenger' }, process.env.JWT_SECRET)}`).send(data);
 
 describe('SR003 shared validator primitives', () => {
   it('handles empty/non-string values', () => {
@@ -52,9 +57,9 @@ describe('SR003 booking half only', () => {
     expect(db.prepare('SELECT COUNT(*) AS n FROM bookings').get().n).toBe(0);
     expect(db.prepare('SELECT booked_seats FROM train_classes').get().booked_seats).toBe(0);
   });
-  it('permits infant age0 and tagged plain-text name without creating a booking', async () => {
+  it('permits infant age0 and tagged plain-text name', async () => {
     const data = body(); data.passengers[0] = { name: '<b>Baby</b>', age: 0, gender: 'F' };
-    expect((await post(data)).status).toBe(501);
+    expect((await post(data)).status).toBe(201);
   });
   it('rejects a name that becomes empty after tag removal', async () => {
     const data = body(); data.passengers[0].name = '<img src=x>';

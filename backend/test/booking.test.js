@@ -11,8 +11,9 @@ const db = require('../src/db');
 const TRAIN_NUMBER = 'T-BOOK-1';
 const TRAVEL_DATE = '2031-03-10';
 let trainId;
+let userId;
 
-const token = () => jwt.sign({ userId: 1, role: 'passenger' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+const token = () => jwt.sign({ userId, role: 'passenger' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 const passenger = { name: 'Asha', age: 30, gender: 'F' };
 const validBody = () => ({
   trainId,
@@ -25,6 +26,10 @@ const post = (body) => request(app).post('/bookings').set('Authorization', `Bear
 
 beforeAll(() => {
   db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8'));
+  userId = Number(
+    db.prepare('INSERT INTO users (name, email, password_hash) VALUES (?,?,?)')
+      .run('Booking Tester', `book-${Date.now()}@example.test`, 'x').lastInsertRowid
+  );
   trainId = Number(
     db
       .prepare('INSERT INTO trains (number, name, source, destination, travel_date) VALUES (?,?,?,?,?)')
@@ -39,8 +44,10 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+  db.prepare('DELETE FROM bookings WHERE train_id = ?').run(trainId);
   db.prepare('DELETE FROM train_classes WHERE train_id = ?').run(trainId);
   db.prepare('DELETE FROM trains WHERE id = ?').run(trainId);
+  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
 });
 
 describe('POST /bookings (RRS-F-020)', () => {
@@ -93,15 +100,14 @@ describe('POST /bookings (RRS-F-020)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('passes validation for 1 to 4 passengers but does not book yet (501)', async () => {
+  it('passes validation for 1 to 4 passengers and confirms the bookings (201)', async () => {
     const one = await post(validBody());
-    expect(one.status).toBe(501);
-    expect(one.body).toEqual({ error: 'Booking not implemented yet' });
+    expect(one.status).toBe(201);
+    expect(one.body.pnr).toMatch(/^\d{10}$/);
     const four = await post({ ...validBody(), passengers: Array(4).fill(passenger) });
-    expect(four.status).toBe(501);
-    // Nothing is written yet.
-    expect(db.prepare('SELECT COUNT(*) AS n FROM bookings WHERE train_id = ?').get(trainId).n).toBe(0);
-    expect(db.prepare('SELECT booked_seats FROM train_classes WHERE train_id = ?').get(trainId).booked_seats).toBe(0);
+    expect(four.status).toBe(201);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM bookings WHERE train_id = ?').get(trainId).n).toBe(2);
+    expect(db.prepare('SELECT booked_seats FROM train_classes WHERE train_id = ?').get(trainId).booked_seats).toBe(5);
   });
 });
 
@@ -123,7 +129,7 @@ describe('booking request type boundaries', () => {
 
   it('accepts a numeric-string trainId and does not invent an infant-age restriction', async () => {
     const res = await post({ ...validBody(), trainId: String(trainId), passengers: [{ ...passenger, age: 0 }] });
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(201);
   });
 
   it.each([null, 'passengers', {}, [null]])('rejects a malformed passenger collection', async (passengers) => {

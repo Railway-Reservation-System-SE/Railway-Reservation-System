@@ -34,6 +34,7 @@ describe('POST /bookings seat check (RRS-F-021)', () => {
   });
 
   afterAll(() => {
+    db.prepare('DELETE FROM bookings WHERE train_id = ?').run(trainId);
     db.prepare('DELETE FROM train_classes WHERE train_id = ?').run(trainId);
     db.prepare('DELETE FROM trains WHERE id = ?').run(trainId);
     db.prepare('DELETE FROM users WHERE id = ?').run(userId);
