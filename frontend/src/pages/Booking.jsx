@@ -77,6 +77,7 @@ export default function Booking() {
           classType,
           travelDate,
           passengers: requestPassengers,
+          paymentMethod,
         },
       });
 
