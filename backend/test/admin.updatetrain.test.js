@@ -103,4 +103,64 @@ describe('PUT/DELETE /admin/trains/:id (RRS-F-051)', () => {
     expect(res.status).toBe(409);
     expect(db.prepare('SELECT id FROM trains WHERE id = ?').get(id)).toBeDefined();
   });
-});
+  test('DELETE removes a train whose only bookings are CANCELLED', async () => {
+    const id = await makeTrain('e');
+    const user = db
+      .prepare("INSERT INTO users (name, email, password_hash, role) VALUES ('t', ?, 'x', 'passenger')")
+      .run(`f051c-${Date.now()}@test.com`);
+    userIds.push(Number(user.lastInsertRowid));
+    db.prepare(
+      "INSERT INTO bookings (pnr, user_id, train_id, class_name, travel_date, passengers_json, fare_paid, status) VALUES (?,?,?,?,?,?,?,'CANCELLED')"
+    ).run(`F051C${Date.now()}`, Number(user.lastInsertRowid), id, 'SL', '2030-02-20', '[]', 400);
+
+    const res = await request(app).delete(`/admin/trains/${id}`).set('Authorization', 'Bearer ' + token);
+    expect(res.status).toBe(200);
+    expect(db.prepare('SELECT id FROM trains WHERE id = ?').get(id)).toBeUndefined();
+    expect(db.prepare('SELECT COUNT(*) AS n FROM bookings WHERE train_id = ?').get(id).n).toBe(0);
+  });
+
+  test('POST rejects an unsupported class_name with 400 and creates nothing', async () => {
+    const res = await request(app)
+      .post('/admin/trains')
+      .set('Authorization', 'Bearer ' + token)
+      .send({
+        number: 'T-F051-EC',
+        name: 'EC Express',
+        source: 'EcSrc',
+        destination: 'EcDst',
+        travelDate: '2030-02-21',
+        classes: [{ class_name: 'EC', fare: 500, totalSeats: 10 }],
+      });
+    expect(res.status).toBe(400);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM trains WHERE number = 'T-F051-EC'").get().n).toBe(0);
+  });
+
+  test('PUT rejects an unsupported class_name with 400 and changes nothing', async () => {
+    const id = await makeTrain('f');
+    const res = await request(app)
+      .put(`/admin/trains/${id}`)
+      .set('Authorization', 'Bearer ' + token)
+      .send({ classes: [{ class_name: 'EC', fare: 500, totalSeats: 10 }] });
+    expect(res.status).toBe(400);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM train_classes WHERE train_id = ?').get(id).n).toBe(1);
+  });
+
+  test('PUT cannot lower totalSeats below booked seats, and rolls back the whole update', async () => {
+    const id = await makeTrain('g');
+    db.prepare("UPDATE train_classes SET booked_seats = 10 WHERE train_id = ? AND class_name = 'SL'").run(id);
+
+    const blocked = await request(app)
+      .put(`/admin/trains/${id}`)
+      .set('Authorization', 'Bearer ' + token)
+      .send({ name: 'Should Not Stick', classes: [{ class_name: 'SL', fare: 400, totalSeats: 5 }] });
+    expect(blocked.status).toBe(400);
+    expect(db.prepare('SELECT name FROM trains WHERE id = ?').get(id).name).toBe('Update Test Express');
+    expect(db.prepare("SELECT total_seats FROM train_classes WHERE train_id = ? AND class_name = 'SL'").get(id).total_seats).toBe(50);
+
+    const allowed = await request(app)
+      .put(`/admin/trains/${id}`)
+      .set('Authorization', 'Bearer ' + token)
+      .send({ classes: [{ class_name: 'SL', fare: 400, totalSeats: 10 }] });
+    expect(allowed.status).toBe(200);
+    expect(db.prepare("SELECT total_seats FROM train_classes WHERE train_id = ? AND class_name = 'SL'").get(id).total_seats).toBe(10);
+  });});

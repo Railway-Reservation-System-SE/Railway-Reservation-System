@@ -6,8 +6,9 @@ const router = express.Router();
 router.use(auth);
 
 const present = (v) => typeof v === 'string' && v.trim() !== '';
+const CLASS_NAMES = ['SL', '3A', '2A'];
 const validClass = (c) =>
-  c && present(c.class_name) && Number(c.fare) > 0 && Number.isInteger(c.totalSeats) && c.totalSeats > 0;
+  c && CLASS_NAMES.includes(c.class_name) && Number(c.fare) > 0 && Number.isInteger(c.totalSeats) && c.totalSeats > 0;
 // RRS-F-050: admin adds a new train with its classes.
 // Auth + admin-only checks are added by RRS-SR-004.
 router.post('/trains', (req, res) => {
@@ -19,10 +20,8 @@ router.post('/trains', (req, res) => {
   if (!Array.isArray(classes) || classes.length === 0) {
     return res.status(400).json({ error: 'at least one class is required' });
   }
-  for (const c of classes) {
-    if (!c || !present(c.class_name) || !(Number(c.fare) > 0) || !Number.isInteger(c.totalSeats) || c.totalSeats <= 0) {
-      return res.status(400).json({ error: 'each class needs class_name, fare > 0 and totalSeats > 0' });
-    }
+    if (!classes.every(validClass)) {
+    return res.status(400).json({ error: 'each class needs class_name (SL, 3A or 2A), fare > 0 and totalSeats > 0' });
   }
 
   const insertTrain = db.prepare(
@@ -121,7 +120,10 @@ router.delete('/trains/:id', (req, res) => {
     return res.status(409).json({ error: 'Train has active bookings' });
   }
 
-  const remove = db.transaction(() => {
+    const remove = db.transaction(() => {
+    // Only CANCELLED bookings can remain here (CONFIRMED ones were rejected above).
+    // They reference the train, so they must be removed before the train itself.
+    db.prepare("DELETE FROM bookings WHERE train_id = ? AND status = 'CANCELLED'").run(id);
     db.prepare('DELETE FROM train_classes WHERE train_id = ?').run(id);
     db.prepare('DELETE FROM trains WHERE id = ?').run(id);
   });
