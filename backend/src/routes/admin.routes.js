@@ -1,7 +1,9 @@
 const express = require('express');
 const db = require('../db');
+const auth = require('../middleware/auth');
 
 const router = express.Router();
+router.use(auth);
 
 const present = (v) => typeof v === 'string' && v.trim() !== '';
 const validClass = (c) =>

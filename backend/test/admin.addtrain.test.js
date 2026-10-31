@@ -1,20 +1,24 @@
 const fs = require('fs');
 const path = require('path');
-const jwt = require('jsonwebtoken');
 const request = require('supertest');
 
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 const app = require('../src/index');
 const db = require('../src/db');
+const { createAdminToken } = require('./helpers/adminAuth');
 
 describe('POST /admin/trains (RRS-F-050)', () => {
   // /admin/* requires a logged-in user (RRS-SR-002). Role checks come with RRS-SR-004.
-  const adminToken = () => jwt.sign({ userId: 1, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  let token;
+  let adminUserId;
+  const adminToken = () => token;
   const createdIds = [];
 
   // Create the schema so this suite does not depend on another suite running first.
-  beforeAll(() => {
+  beforeAll(async () => {
     db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8'));
+    const admin = await createAdminToken();
+    token = admin.token;
+    adminUserId = admin.userId;
   });
 
   afterAll(() => {
@@ -22,6 +26,7 @@ describe('POST /admin/trains (RRS-F-050)', () => {
       db.prepare('DELETE FROM train_classes WHERE train_id = ?').run(id);
       db.prepare('DELETE FROM trains WHERE id = ?').run(id);
     }
+    db.prepare('DELETE FROM users WHERE id = ?').run(adminUserId);
   });
 
   const payload = {
