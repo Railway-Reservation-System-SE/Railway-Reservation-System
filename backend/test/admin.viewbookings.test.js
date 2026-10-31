@@ -1,13 +1,22 @@
+const fs = require('fs');
+const path = require('path');
 const request = require('supertest');
 const app = require('../src/index');
 const db = require('../src/db');
+const { createAdminToken } = require('./helpers/adminAuth');
 
 describe('GET /admin/trains/:id/bookings (RRS-F-052)', () => {
   let trainId;
   let userId;
+  let token;
+  let adminUserId;
 
   beforeAll(async () => {
-    const res = await request(app).post('/admin/trains').send({
+    db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'schema.sql'), 'utf8'));
+    const admin = await createAdminToken();
+    token = admin.token;
+    adminUserId = admin.userId;
+    const res = await adminRequest('post', '/admin/trains').send({
       number: 'T-F052',
       name: 'Bookings Test Express',
       source: 'BkSource',
@@ -30,15 +39,19 @@ describe('GET /admin/trains/:id/bookings (RRS-F-052)', () => {
     insert.run(`F052B${Date.now()}`, userId, trainId, 'SL', '2030-03-10', people, 300, 'CANCELLED');
   });
 
+  const adminRequest = (method, route) =>
+    request(app)[method](route).set('Authorization', `Bearer ${token}`);
+
   afterAll(() => {
     db.prepare('DELETE FROM bookings WHERE train_id = ?').run(trainId);
     db.prepare('DELETE FROM train_classes WHERE train_id = ?').run(trainId);
     db.prepare('DELETE FROM trains WHERE id = ?').run(trainId);
     db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(adminUserId);
   });
 
   test('returns both CONFIRMED and CANCELLED bookings with status', async () => {
-    const res = await request(app).get(`/admin/trains/${trainId}/bookings`);
+    const res = await adminRequest('get', `/admin/trains/${trainId}/bookings`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
     expect(res.body.map((b) => b.status).sort()).toEqual(['CANCELLED', 'CONFIRMED']);
@@ -47,7 +60,7 @@ describe('GET /admin/trains/:id/bookings (RRS-F-052)', () => {
   });
 
   test('train with no bookings returns an empty list', async () => {
-    const created = await request(app).post('/admin/trains').send({
+    const created = await adminRequest('post', '/admin/trains').send({
       number: 'T-F052-EMPTY',
       name: 'Empty Express',
       source: 'EmptySource',
@@ -55,7 +68,7 @@ describe('GET /admin/trains/:id/bookings (RRS-F-052)', () => {
       travelDate: '2030-03-11',
       classes: [{ class_name: 'SL', fare: 100, totalSeats: 10 }],
     });
-    const res = await request(app).get(`/admin/trains/${created.body.id}/bookings`);
+    const res = await adminRequest('get', `/admin/trains/${created.body.id}/bookings`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
 
@@ -64,7 +77,7 @@ describe('GET /admin/trains/:id/bookings (RRS-F-052)', () => {
   });
 
   test('unknown train returns 404', async () => {
-    const res = await request(app).get('/admin/trains/999999/bookings');
+    const res = await adminRequest('get', '/admin/trains/999999/bookings');
     expect(res.status).toBe(404);
   });
 });
