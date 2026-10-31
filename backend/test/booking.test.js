@@ -14,7 +14,13 @@ let trainId;
 
 const token = () => jwt.sign({ userId: 1, role: 'passenger' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 const passenger = { name: 'Asha', age: 30, gender: 'F' };
-const validBody = () => ({ trainId, classType: 'SL', travelDate: TRAVEL_DATE, passengers: [passenger] });
+const validBody = () => ({
+  trainId,
+  classType: 'SL',
+  travelDate: TRAVEL_DATE,
+  passengers: [passenger],
+  paymentMethod: 'card',
+});
 const post = (body) => request(app).post('/bookings').set('Authorization', `Bearer ${token()}`).send(body);
 
 beforeAll(() => {
