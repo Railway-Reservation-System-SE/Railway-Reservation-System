@@ -197,9 +197,8 @@ export default function Booking() {
               required
             >
               <option value="">Choose a method</option>
-              <option value="UPI">UPI</option>
-              <option value="Card">Credit/debit card</option>
-              <option value="NetBanking">Net banking</option>
+              <option value="upi">UPI</option>
+              <option value="card">Credit/debit card</option>
             </select>
           </div>
 
