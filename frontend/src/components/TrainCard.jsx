@@ -1,6 +1,7 @@
 
 import { Link } from 'react-router-dom';
 import { buildBookingUrl } from '../utils/bookingUrl';
+import './TrainCard.css';
 
 export default function TrainCard({ train, date }) {
   return (

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import './Booking.css';
 
 const MAX_PASSENGERS = 4;
 
@@ -70,7 +71,7 @@ export default function Booking() {
     setLoading(true);
 
     try {
-      await api('/bookings', {
+      const result = await api('/bookings', {
         method: 'POST',
         body: {
           trainId,
@@ -81,13 +82,11 @@ export default function Booking() {
         },
       });
 
-      setMessage('Booking request submitted.');
-    } catch (err) {
-      setError(
-        err.message === 'Booking not implemented yet'
-          ? 'The booking service is not available yet. Your booking has not been created.'
-          : err.message || 'Unable to submit booking. Please try again.'
+      setMessage(
+        `Booking confirmed. PNR: ${result.pnr}. Simulated fare paid: ₹${Number(result.farePaid).toLocaleString('en-IN')}.`
       );
+    } catch (err) {
+      setError(err.message || 'Unable to submit booking. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -203,11 +202,11 @@ export default function Booking() {
             </select>
           </div>
 
-          <p>Payment is not processed by this form yet.</p>
+          <p className="payment-note">Payment is simulated for this demo - no real charge is made.</p>
         </section>
 
-        {error && <p role="alert">{error}</p>}
-        {message && <p role="status">{message}</p>}
+        {error && <p className="form-message form-message--error" role="alert">{error}</p>}
+        {message && <p className="form-message form-message--success" role="status">{message}</p>}
 
         <button type="submit" disabled={loading}>
           {loading ? 'Submitting...' : 'Submit booking'}

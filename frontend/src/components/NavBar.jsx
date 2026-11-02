@@ -11,21 +11,21 @@ export default function NavBar() {
 
   return (
     <nav>
-      <Link to="/">Railway Reservation</Link>{' | '}
+      <Link to="/">Railway Reservation</Link>
       {token ? (
         <>
-          <Link to="/search">Search Trains</Link>{' | '}
-          <Link to="/bookings">My Bookings</Link>{' | '}
+          <Link to="/search">Search Trains</Link>
+          <Link to="/bookings">My Bookings</Link>
           <button type="button" onClick={handleLogout}>Logout</button>
         </>
       ) : (
         <>
-          <Link to="/login">Login</Link>{' | '}
+          <Link to="/login">Login</Link>
           <Link to="/register">Register</Link>
         </>
       )}
-      {' | '}
-      <Link to="/pnr">PNR Lookup</Link>{' | '}
+      
+      <Link to="/pnr">PNR Lookup</Link>
       <Link to="/admin/trains">Admin Trains</Link>
     </nav>
   );

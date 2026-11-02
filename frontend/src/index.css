@@ -37,7 +37,17 @@ nav a:hover {
 }
 
 nav button {
+  padding: 6px 14px;
+  background: #fff;
+  color: #174a7e;
+  border: 1px solid #174a7e;
+  border-radius: 4px;
+  font: inherit;
   cursor: pointer;
+}
+
+nav button:hover {
+  background: #eef3f8;
 }
 
 main {
