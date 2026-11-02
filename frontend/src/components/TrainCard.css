@@ -1,0 +1,48 @@
+.train-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.train-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.train-card__header h2 { margin: 0; }
+.train-card__number { margin: 4px 0 0; color: #555; }
+.train-card__route { margin: 0; font-weight: 600; }
+
+.train-card__classes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.train-class {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  padding: 12px;
+}
+.train-class h3 { margin: 0 0 4px; }
+.train-class p { margin: 2px 0; }
+
+.train-class__book {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #174a7e;
+  color: #fff;
+  border-radius: 4px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.train-class__book:hover { background: #123c66; text-decoration: none; }
