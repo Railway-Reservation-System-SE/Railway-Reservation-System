@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { api } from '../api';
 import TrainCard from '../components/TrainCard';
+import './Search.css';
 
 export default function Search() {
   const [source, setSource] = useState('');
