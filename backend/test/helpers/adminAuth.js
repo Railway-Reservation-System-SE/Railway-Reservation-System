@@ -17,4 +17,15 @@ async function createAdminToken() {
   return { token: login.body.token, userId: Number(result.lastInsertRowid) };
 }
 
-module.exports = { createAdminToken };
+// Creates a throwaway passenger user and returns { token, userId }.
+async function createPassengerToken() {
+  const email = `pax-${Date.now()}-${Math.random().toString(36).slice(2)}@test.com`;
+  const hash = bcrypt.hashSync('secret123', 4);
+  const result = db
+    .prepare("INSERT INTO users (name, email, password_hash, role) VALUES ('Test Passenger', ?, ?, 'passenger')")
+    .run(email, hash);
+  const login = await request(app).post('/auth/login').send({ email, password: 'secret123' });
+  return { token: login.body.token, userId: Number(result.lastInsertRowid) };
+}
+
+module.exports = { createAdminToken, createPassengerToken };

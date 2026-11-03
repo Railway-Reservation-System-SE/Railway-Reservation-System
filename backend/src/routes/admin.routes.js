@@ -1,9 +1,9 @@
 const express = require('express');
 const db = require('../db');
 const auth = require('../middleware/auth');
-
+const requireAdmin = require('../middleware/requireAdmin');
 const router = express.Router();
-router.use(auth);
+router.use(auth, requireAdmin);
 
 const present = (v) => typeof v === 'string' && v.trim() !== '';
 const CLASS_NAMES = ['SL', '3A', '2A'];
