@@ -89,7 +89,8 @@ router.post('/', auth, (req, res) => {
   return res.status(201).json({ pnr: result.pnr, status: 'CONFIRMED', farePaid: payment.totalFare });
 });
 
-// RRS-F-030 / RRS-F-031: Cancel a booking and release its seats atomically.
+// RRS-F-030 / RRS-F-031 / RRS-F-032:
+// Cancel a booking, release its seats, and return a confirmation message.
 router.post('/:id/cancel', auth, (req, res) => {
   const bookingId = Number(req.params.id);
 
@@ -166,7 +167,10 @@ router.post('/:id/cancel', auth, (req, res) => {
 
     return {
       status: 200,
-      body: { status: 'CANCELLED' },
+      body: {
+        status: 'CANCELLED',
+        message: 'Booking cancelled, seats released',
+      },
     };
   });
 

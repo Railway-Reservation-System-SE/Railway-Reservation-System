@@ -12,6 +12,7 @@ let userId;
 let otherUserId;
 let trainId;
 let bookingId;
+let confirmationBookingId;
 let cancelledBookingId;
 let slClassId;
 let threeAClassId;
@@ -143,6 +144,23 @@ beforeAll(() => {
       1000
     ).lastInsertRowid
   );
+
+  // F-032 cancellation confirmation booking.
+  confirmationBookingId = Number(
+    db.prepare(
+      `INSERT INTO bookings
+       (pnr, user_id, train_id, class_name, travel_date, passengers_json, fare_paid)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      '5555555555',
+      userId,
+      trainId,
+      'SL',
+      '2031-03-10',
+      JSON.stringify(passengers),
+      1000
+    ).lastInsertRowid
+  );
 });
 
 afterAll(() => {
@@ -177,7 +195,10 @@ describe('POST /bookings/:id/cancel (RRS-F-030)', () => {
     const res = await postCancel(bookingId);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'CANCELLED' });
+    expect(res.body).toEqual({
+      status: 'CANCELLED',
+      message: 'Booking cancelled, seats released',
+    });
     expect(getBookingStatus(bookingId)).toBe('CANCELLED');
   });
 
@@ -229,5 +250,22 @@ describe('POST /bookings/:id/cancel (RRS-F-031)', () => {
     expect(res.status).toBe(400);
     expect(getBookedSeats(slClassId)).toBe(0);
     expect(getBookingStatus(rollbackBookingId)).toBe('CONFIRMED');
+  });
+});
+
+describe('POST /bookings/:id/cancel (RRS-F-032)', () => {
+  it('returns the exact cancellation confirmation message', async () => {
+    // Restore the booked seats after the F-031 rollback test.
+    db.prepare('UPDATE train_classes SET booked_seats = 2 WHERE id = ?')
+      .run(slClassId);
+
+    const res = await postCancel(confirmationBookingId);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      status: 'CANCELLED',
+      message: 'Booking cancelled, seats released',
+    });
+    expect(getBookingStatus(confirmationBookingId)).toBe('CANCELLED');
   });
 });
