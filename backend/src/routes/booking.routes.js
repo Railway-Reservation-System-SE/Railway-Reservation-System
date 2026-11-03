@@ -89,7 +89,7 @@ router.post('/', auth, (req, res) => {
   return res.status(201).json({ pnr: result.pnr, status: 'CONFIRMED', farePaid: payment.totalFare });
 });
 
-// RRS-F-030: Cancel a confirmed booking.
+// RRS-F-030 / RRS-F-031: Cancel a booking and release its seats atomically.
 router.post('/:id/cancel', auth, (req, res) => {
   const bookingId = Number(req.params.id);
 
@@ -97,25 +97,92 @@ router.post('/:id/cancel', auth, (req, res) => {
     return res.status(400).json({ error: 'Invalid booking ID' });
   }
 
-  const booking = db
-    .prepare('SELECT id, user_id, status FROM bookings WHERE id = ?')
-    .get(bookingId);
+  const cancelBooking = db.transaction(() => {
+    const booking = db
+      .prepare(
+        `SELECT id, user_id, train_id, class_name, passengers_json, status
+         FROM bookings
+         WHERE id = ?`
+      )
+      .get(bookingId);
 
-  if (!booking) {
-    return res.status(404).json({ error: 'Booking not found' });
+    if (!booking) {
+      return { status: 404, body: { error: 'Booking not found' } };
+    }
+
+    if (booking.user_id !== req.user.id) {
+      return { status: 403, body: { error: 'Not your booking' } };
+    }
+
+    if (booking.status !== 'CONFIRMED') {
+      return { status: 400, body: { error: 'Booking already cancelled' } };
+    }
+
+    let passengers;
+
+    try {
+      passengers = JSON.parse(booking.passengers_json);
+    } catch {
+      return { status: 400, body: { error: 'Invalid booking passenger data' } };
+    }
+
+    if (!Array.isArray(passengers) || passengers.length === 0) {
+      return { status: 400, body: { error: 'Invalid booking passenger data' } };
+    }
+
+    const passengerCount = passengers.length;
+
+    const releaseSeats = db.prepare(
+      `UPDATE train_classes
+       SET booked_seats = booked_seats - ?
+       WHERE train_id = ?
+         AND class_name = ?
+         AND booked_seats >= ?`
+    );
+
+    const releaseResult = releaseSeats.run(
+      passengerCount,
+      booking.train_id,
+      booking.class_name,
+      passengerCount
+    );
+
+    if (releaseResult.changes !== 1) {
+      return {
+        status: 400,
+        body: { error: 'Unable to release booked seats' },
+      };
+    }
+
+    const updateBooking = db.prepare(
+      `UPDATE bookings
+       SET status = 'CANCELLED'
+       WHERE id = ? AND status = 'CONFIRMED'`
+    );
+
+    if (updateBooking.run(bookingId).changes !== 1) {
+      throw new Error('BOOKING_ALREADY_CANCELLED');
+    }
+
+    return {
+      status: 200,
+      body: { status: 'CANCELLED' },
+    };
+  });
+
+  let result;
+
+  try {
+    result = cancelBooking();
+  } catch (error) {
+    if (error.message === 'BOOKING_ALREADY_CANCELLED') {
+      return res.status(400).json({ error: 'Booking already cancelled' });
+    }
+
+    throw error;
   }
 
-  if (booking.user_id !== req.user.id) {
-    return res.status(403).json({ error: 'Not your booking' });
-  }
-
-  if (booking.status !== 'CONFIRMED') {
-    return res.status(400).json({ error: 'Booking already cancelled' });
-  }
-
-  db.prepare("UPDATE bookings SET status = 'CANCELLED' WHERE id = ?").run(bookingId);
-
-  return res.status(200).json({ status: 'CANCELLED' });
+  return res.status(result.status).json(result.body);
 });
 
 module.exports = router;
