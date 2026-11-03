@@ -2,25 +2,44 @@ const express = require('express');
 const db = require('../db');
 const auth = require('../middleware/auth');
 const requireAdmin = require('../middleware/requireAdmin');
+const { isNonEmptyString, isPositiveNumber, isValidDate, stripHtml } = require('../utils/validate');
 const router = express.Router();
 router.use(auth, requireAdmin);
 
-const present = (v) => typeof v === 'string' && v.trim() !== '';
 const CLASS_NAMES = ['SL', '3A', '2A'];
 const validClass = (c) =>
-  c && CLASS_NAMES.includes(c.class_name) && Number(c.fare) > 0 && Number.isInteger(c.totalSeats) && c.totalSeats > 0;
+  c &&
+  CLASS_NAMES.includes(c.class_name) &&
+  isPositiveNumber(c.fare) &&
+  Number.isSafeInteger(c.totalSeats) &&
+  c.totalSeats > 0;
+const parseTrainId = (value) => {
+  if (!/^\d+$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+};
+
 // RRS-F-050: admin adds a new train with its classes.
 // Auth + admin-only checks are added by RRS-SR-004.
 router.post('/trains', (req, res) => {
   const { number, name, source, destination, travelDate, classes } = req.body || {};
+  const cleanedFields = {
+    number: stripHtml(number),
+    name: stripHtml(name),
+    source: stripHtml(source),
+    destination: stripHtml(destination),
+  };
 
-  if (![number, name, source, destination, travelDate].every(present)) {
+  if (!Object.values(cleanedFields).every(isNonEmptyString)) {
     return res.status(400).json({ error: 'number, name, source, destination and travelDate are required' });
+  }
+  if (!isValidDate(travelDate)) {
+    return res.status(400).json({ error: 'travelDate must be a valid date today or later (YYYY-MM-DD)' });
   }
   if (!Array.isArray(classes) || classes.length === 0) {
     return res.status(400).json({ error: 'at least one class is required' });
   }
-    if (!classes.every(validClass)) {
+  if (!classes.every(validClass)) {
     return res.status(400).json({ error: 'each class needs class_name (SL, 3A or 2A), fare > 0 and totalSeats > 0' });
   }
 
@@ -32,7 +51,13 @@ router.post('/trains', (req, res) => {
   );
 
   const create = db.transaction(() => {
-    const result = insertTrain.run(number, name, source, destination, travelDate);
+    const result = insertTrain.run(
+      cleanedFields.number,
+      cleanedFields.name,
+      cleanedFields.source,
+      cleanedFields.destination,
+      travelDate
+    );
     const trainId = Number(result.lastInsertRowid);
     for (const c of classes) {
       insertClass.run(trainId, c.class_name, Number(c.fare), c.totalSeats);
@@ -48,22 +73,37 @@ router.post('/trains', (req, res) => {
 });
 // RRS-F-051: update an existing train (only the provided fields) and upsert classes by class_name.
 router.put('/trains/:id', (req, res) => {
-  const id = Number(req.params.id);
+  const id = parseTrainId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ error: 'Invalid train ID' });
+  }
+
   const train = db.prepare('SELECT id FROM trains WHERE id = ?').get(id);
   if (!train) {
     return res.status(404).json({ error: 'Train not found' });
   }
 
   const { number, name, source, destination, travelDate, classes } = req.body || {};
-  const fields = { number, name, source, destination, travel_date: travelDate };
+  const fields = {
+    number: number === undefined ? undefined : stripHtml(number),
+    name: name === undefined ? undefined : stripHtml(name),
+    source: source === undefined ? undefined : stripHtml(source),
+    destination: destination === undefined ? undefined : stripHtml(destination),
+    travel_date: travelDate,
+  };
 
   for (const value of Object.values(fields)) {
-    if (value !== undefined && !present(value)) {
+    if (value !== undefined && !isNonEmptyString(value)) {
       return res.status(400).json({ error: 'train fields must be non-empty text' });
     }
   }
+  if (travelDate !== undefined && !isValidDate(travelDate)) {
+    return res.status(400).json({ error: 'travelDate must be a valid date today or later (YYYY-MM-DD)' });
+  }
   if (classes !== undefined && (!Array.isArray(classes) || !classes.every(validClass))) {
-    return res.status(400).json({ error: 'each class needs class_name, fare > 0 and totalSeats > 0' });
+    return res
+      .status(400)
+      .json({ error: 'each class needs class_name (SL, 3A or 2A), fare > 0 and totalSeats > 0' });
   }
 
   const apply = db.transaction(() => {
@@ -105,9 +145,15 @@ router.put('/trains/:id', (req, res) => {
     }
     return res.status(500).json({ error: 'Internal server error' });
   }
-});// RRS-F-051: delete a train unless it has CONFIRMED bookings.
+});
+
+// RRS-F-051: delete a train unless it has CONFIRMED bookings.
 router.delete('/trains/:id', (req, res) => {
-  const id = Number(req.params.id);
+  const id = parseTrainId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ error: 'Invalid train ID' });
+  }
+
   const train = db.prepare('SELECT id FROM trains WHERE id = ?').get(id);
   if (!train) {
     return res.status(404).json({ error: 'Train not found' });
@@ -120,7 +166,7 @@ router.delete('/trains/:id', (req, res) => {
     return res.status(409).json({ error: 'Train has active bookings' });
   }
 
-    const remove = db.transaction(() => {
+  const remove = db.transaction(() => {
     // Only CANCELLED bookings can remain here (CONFIRMED ones were rejected above).
     // They reference the train, so they must be removed before the train itself.
     db.prepare("DELETE FROM bookings WHERE train_id = ? AND status = 'CANCELLED'").run(id);
@@ -135,9 +181,14 @@ router.delete('/trains/:id', (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 // RRS-F-052: list every booking (CONFIRMED and CANCELLED) for one train.
 router.get('/trains/:id/bookings', (req, res) => {
-  const id = Number(req.params.id);
+  const id = parseTrainId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ error: 'Invalid train ID' });
+  }
+
   const train = db.prepare('SELECT id FROM trains WHERE id = ?').get(id);
   if (!train) {
     return res.status(404).json({ error: 'Train not found' });

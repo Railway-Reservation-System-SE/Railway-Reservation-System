@@ -27,7 +27,7 @@ describe('PUT/DELETE /admin/trains/:id (RRS-F-051)', () => {
       name: 'Update Test Express',
       source: 'UpdSource',
       destination: 'UpdDest',
-      travelDate: '2030-02-20',
+      travelDate: '2099-12-31',
       classes: [{ class_name: 'SL', fare: 400, totalSeats: 50 }],
     });
     trainIds.push(res.body.id);
@@ -66,6 +66,55 @@ describe('PUT/DELETE /admin/trains/:id (RRS-F-051)', () => {
     expect(classes.find((c) => c.class_name === 'SL').fare).toBe(450);
   });
 
+  test('PUT sanitizes supplied text fields and leaves omitted fields unchanged', async () => {
+    const id = await makeTrain('clean');
+    const res = await adminRequest('put', `/admin/trains/${id}`).send({
+      name: ' <b>Clean Express</b> ',
+      source: ' <i>CleanSource</i> ',
+    });
+    expect(res.status).toBe(200);
+    const train = db.prepare('SELECT * FROM trains WHERE id = ?').get(id);
+    expect(train.name).toBe('Clean Express');
+    expect(train.source).toBe('CleanSource');
+    expect(train.number).toBe('T-F051-clean');
+    expect(train.destination).toBe('UpdDest');
+    expect(train.travel_date).toBe('2099-12-31');
+  });
+
+  test('PUT rejects malformed or past dates without changing the train', async () => {
+    const id = await makeTrain('date');
+    for (const travelDate of ['2000-01-01', '2099-02-30', 'not-a-date']) {
+      const res = await adminRequest('put', `/admin/trains/${id}`).send({ travelDate });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/travelDate/);
+    }
+    expect(db.prepare('SELECT travel_date FROM trains WHERE id = ?').get(id).travel_date).toBe('2099-12-31');
+  });
+
+  test('PUT rejects text fields that become empty after HTML removal', async () => {
+    const id = await makeTrain('empty-html');
+    const res = await adminRequest('put', `/admin/trains/${id}`).send({ name: '<img src=x>' });
+    expect(res.status).toBe(400);
+  });
+
+  test('PUT rejects malformed class fares and seat counts', async () => {
+    const id = await makeTrain('invalid-class-values');
+    for (const trainClass of [
+      { class_name: 'SL', fare: 0, totalSeats: 10 },
+      { class_name: 'SL', fare: 400, totalSeats: 0 },
+      { class_name: 'SL', fare: '400', totalSeats: 10 },
+      { class_name: 'SL', fare: 400, totalSeats: Number.MAX_SAFE_INTEGER * 2 },
+    ]) {
+      const res = await adminRequest('put', `/admin/trains/${id}`).send({ classes: [trainClass] });
+      expect(res.status).toBe(400);
+    }
+  });
+
+  test('PUT rejects malformed train IDs with 400', async () => {
+    const res = await adminRequest('put', '/admin/trains/not-an-id').send({ name: 'X' });
+    expect(res.status).toBe(400);
+  });
+
   test('PUT on unknown train returns 404', async () => {
     const res = await adminRequest('put', '/admin/trains/999999').send({ name: 'X' });
     expect(res.status).toBe(404);
@@ -97,7 +146,7 @@ describe('PUT/DELETE /admin/trains/:id (RRS-F-051)', () => {
     userIds.push(Number(user.lastInsertRowid));
     db.prepare(
       "INSERT INTO bookings (pnr, user_id, train_id, class_name, travel_date, passengers_json, fare_paid, status) VALUES (?,?,?,?,?,?,?,'CONFIRMED')"
-    ).run(`F051${Date.now()}`, Number(user.lastInsertRowid), id, 'SL', '2030-02-20', '[]', 400);
+    ).run(`F051${Date.now()}`, Number(user.lastInsertRowid), id, 'SL', '2099-12-31', '[]', 400);
 
     const res = await adminRequest('delete', `/admin/trains/${id}`);
     expect(res.status).toBe(409);
@@ -111,7 +160,7 @@ describe('PUT/DELETE /admin/trains/:id (RRS-F-051)', () => {
     userIds.push(Number(user.lastInsertRowid));
     db.prepare(
       "INSERT INTO bookings (pnr, user_id, train_id, class_name, travel_date, passengers_json, fare_paid, status) VALUES (?,?,?,?,?,?,?,'CANCELLED')"
-    ).run(`F051C${Date.now()}`, Number(user.lastInsertRowid), id, 'SL', '2030-02-20', '[]', 400);
+    ).run(`F051C${Date.now()}`, Number(user.lastInsertRowid), id, 'SL', '2099-12-31', '[]', 400);
 
     const res = await request(app).delete(`/admin/trains/${id}`).set('Authorization', 'Bearer ' + token);
     expect(res.status).toBe(200);
@@ -128,7 +177,7 @@ describe('PUT/DELETE /admin/trains/:id (RRS-F-051)', () => {
         name: 'EC Express',
         source: 'EcSrc',
         destination: 'EcDst',
-        travelDate: '2030-02-21',
+        travelDate: '2099-12-31',
         classes: [{ class_name: 'EC', fare: 500, totalSeats: 10 }],
       });
     expect(res.status).toBe(400);
