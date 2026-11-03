@@ -34,7 +34,7 @@ describe('POST /admin/trains (RRS-F-050)', () => {
     name: 'Test Express',
     source: 'TestSource',
     destination: 'TestDest',
-    travelDate: '2030-01-15',
+    travelDate: '2099-12-31',
     classes: [
       { class_name: 'SL', fare: 500, totalSeats: 72 },
       { class_name: '3A', fare: 1200, totalSeats: 40 },
@@ -57,7 +57,7 @@ describe('POST /admin/trains (RRS-F-050)', () => {
 
     const res = await request(app)
       .get('/trains/search')
-      .query({ source: 'TestSource', destination: 'TestDest', date: '2030-01-15' });
+      .query({ source: 'TestSource', destination: 'TestDest', date: payload.travelDate });
     expect(res.status).toBe(200);
     expect(res.body.some((t) => t.id === created.body.id)).toBe(true);
   });
@@ -69,6 +69,54 @@ describe('POST /admin/trains (RRS-F-050)', () => {
 
   test('missing fields returns 400', async () => {
     const res = await request(app).post('/admin/trains').set('Authorization', `Bearer ${adminToken()}`).send({ name: 'No Number' });
+    expect(res.status).toBe(400);
+  });
+
+  test.each(['2000-01-01', '2099-02-30', 'not-a-date'])('invalid travel date %s returns 400', async (travelDate) => {
+    const res = await request(app)
+      .post('/admin/trains')
+      .set('Authorization', `Bearer ${adminToken()}`)
+      .send({ ...payload, number: `T-INVALID-${travelDate}`, travelDate });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/travelDate/);
+  });
+
+  test('strips HTML from train text fields before saving', async () => {
+    const res = await request(app)
+      .post('/admin/trains')
+      .set('Authorization', `Bearer ${adminToken()}`)
+      .send({
+        ...payload,
+        number: ' <b>T-9001-CLEAN</b> ',
+        name: ' <b>Clean Express</b> ',
+        source: ' <i>CleanSource</i> ',
+        destination: ' <i>CleanDest</i> ',
+      });
+
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+    const train = db.prepare('SELECT number, name, source, destination FROM trains WHERE id = ?').get(res.body.id);
+    expect(train).toEqual({
+      number: 'T-9001-CLEAN',
+      name: 'Clean Express',
+      source: 'CleanSource',
+      destination: 'CleanDest',
+    });
+  });
+
+  test('rejects a required text field that is empty after HTML removal', async () => {
+    const res = await request(app)
+      .post('/admin/trains')
+      .set('Authorization', `Bearer ${adminToken()}`)
+      .send({ ...payload, name: '<img src=x>' });
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects a non-numeric fare', async () => {
+    const res = await request(app)
+      .post('/admin/trains')
+      .set('Authorization', `Bearer ${adminToken()}`)
+      .send({ ...payload, classes: [{ class_name: 'SL', fare: '500', totalSeats: 10 }] });
     expect(res.status).toBe(400);
   });
 
