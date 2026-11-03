@@ -31,3 +31,9 @@ TODO — filled in by SETUP-06 (backend) and SETUP-07 (frontend).
 - Backend: TODO
 - Frontend: TODO
 - Seed database: TODO
+  
+  ## HTTPS and demo scope
+  * This demo runs only on localhost over HTTP.
+* Not enabling HTTPS is an intentional exception for this local demo, not a claim that localhost can't use HTTPS.
+* An online deployment would need HTTPS configured and verified.
+
