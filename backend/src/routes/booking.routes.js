@@ -89,4 +89,33 @@ router.post('/', auth, (req, res) => {
   return res.status(201).json({ pnr: result.pnr, status: 'CONFIRMED', farePaid: payment.totalFare });
 });
 
+// RRS-F-030: Cancel a confirmed booking.
+router.post('/:id/cancel', auth, (req, res) => {
+  const bookingId = Number(req.params.id);
+
+  if (!Number.isSafeInteger(bookingId) || bookingId <= 0) {
+    return res.status(400).json({ error: 'Invalid booking ID' });
+  }
+
+  const booking = db
+    .prepare('SELECT id, user_id, status FROM bookings WHERE id = ?')
+    .get(bookingId);
+
+  if (!booking) {
+    return res.status(404).json({ error: 'Booking not found' });
+  }
+
+  if (booking.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Not your booking' });
+  }
+
+  if (booking.status !== 'CONFIRMED') {
+    return res.status(400).json({ error: 'Booking already cancelled' });
+  }
+
+  db.prepare("UPDATE bookings SET status = 'CANCELLED' WHERE id = ?").run(bookingId);
+
+  return res.status(200).json({ status: 'CANCELLED' });
+});
+
 module.exports = router;
