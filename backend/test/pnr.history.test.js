@@ -70,6 +70,7 @@ describe('GET /bookings/me (RRS-F-041)', () => {
 
     passengerABookings = [
       {
+        id: expect.any(Number),
         pnr: '2345678902',
         status: 'CANCELLED',
         train: {
@@ -83,6 +84,7 @@ describe('GET /bookings/me (RRS-F-041)', () => {
         farePaid: 2000,
       },
       {
+        id: expect.any(Number),
         pnr: '2345678901',
         status: 'CONFIRMED',
         train: {
@@ -98,6 +100,7 @@ describe('GET /bookings/me (RRS-F-041)', () => {
     ];
 
     passengerBBooking = {
+      id: expect.any(Number),
       pnr: '2345678903',
       status: 'CONFIRMED',
       train: {

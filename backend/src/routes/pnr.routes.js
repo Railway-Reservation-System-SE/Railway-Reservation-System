@@ -9,6 +9,7 @@ router.get('/me', auth, (req, res) => {
   const bookings = db
     .prepare(
       `SELECT
+         b.id,
          b.pnr,
          b.status,
          t.number AS train_number,
@@ -27,6 +28,7 @@ router.get('/me', auth, (req, res) => {
 
   return res.status(200).json(
     bookings.map((booking) => ({
+      id: booking.id,
       pnr: booking.pnr,
       status: booking.status,
       train: {
