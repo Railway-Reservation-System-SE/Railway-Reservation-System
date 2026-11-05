@@ -8,7 +8,14 @@ const dbPath = path.join(__dirname, '..', 'db', 'railway.db');
 const schemaPath = path.join(__dirname, '..', 'db', 'schema.sql');
 
 const db = new Database(dbPath);
-
+// Seed dates are relative to today so demos and QA runs always have bookable trains.
+function dateFromToday(offsetDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
 // Create the tables from schema.sql
 const schema = fs.readFileSync(schemaPath, 'utf8');
 db.exec(schema);
@@ -20,7 +27,7 @@ const trains = [
     name: 'Karnataka Express',
     source: 'Bengaluru',
     destination: 'New Delhi',
-    travel_date: '2026-11-01',
+    travel_date: dateFromToday(1),
     classes: [
       { class_name: 'SL', fare: 550, total_seats: 100 },
       { class_name: '3A', fare: 1450, total_seats: 60 },
@@ -32,7 +39,7 @@ const trains = [
     name: 'Karnataka Express',
     source: 'New Delhi',
     destination: 'Bengaluru',
-    travel_date: '2026-11-03',
+    travel_date: dateFromToday(2),
     classes: [
       { class_name: 'SL', fare: 550, total_seats: 100 },
       { class_name: '3A', fare: 1450, total_seats: 60 },
@@ -44,7 +51,7 @@ const trains = [
     name: 'Shatabdi Express',
     source: 'Bengaluru',
     destination: 'Chennai',
-    travel_date: '2026-11-02',
+    travel_date: dateFromToday(3),
     classes: [
       { class_name: 'SL', fare: 300, total_seats: 80 },
       { class_name: '3A', fare: 850, total_seats: 50 },
@@ -56,7 +63,7 @@ const trains = [
     name: 'Brindavan Express',
     source: 'Chennai',
     destination: 'Bengaluru',
-    travel_date: '2026-11-04',
+    travel_date: dateFromToday(4),
     classes: [
       { class_name: 'SL', fare: 280, total_seats: 80 },
       { class_name: '3A', fare: 800, total_seats: 50 },
@@ -68,7 +75,7 @@ const trains = [
     name: 'Mumbai Rajdhani',
     source: 'Mumbai',
     destination: 'New Delhi',
-    travel_date: '2026-11-05',
+    travel_date: dateFromToday(5),
     classes: [
       { class_name: 'SL', fare: 700, total_seats: 100 },
       { class_name: '3A', fare: 1800, total_seats: 60 },
