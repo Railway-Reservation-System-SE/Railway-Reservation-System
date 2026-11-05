@@ -72,6 +72,29 @@ router.post('/trains', (req, res) => {
   }
 });
 // RRS-F-051: update an existing train (only the provided fields) and upsert classes by class_name.
+// UI-ADMIN support: list every train with its classes (not in the original API table).
+router.get('/trains', (req, res) => {
+  const trains = db.prepare('SELECT * FROM trains ORDER BY travel_date, id').all();
+  const classesFor = db.prepare(
+    'SELECT class_name, fare, total_seats, booked_seats FROM train_classes WHERE train_id = ? ORDER BY id'
+  );
+  return res.status(200).json(
+    trains.map((t) => ({
+      id: t.id,
+      number: t.number,
+      name: t.name,
+      source: t.source,
+      destination: t.destination,
+      travelDate: t.travel_date,
+      classes: classesFor.all(t.id).map((c) => ({
+        class_name: c.class_name,
+        fare: c.fare,
+        totalSeats: c.total_seats,
+        bookedSeats: c.booked_seats,
+      })),
+    }))
+  );
+});
 router.put('/trains/:id', (req, res) => {
   const id = parseTrainId(req.params.id);
   if (id === null) {
