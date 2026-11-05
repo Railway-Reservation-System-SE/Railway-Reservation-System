@@ -30,8 +30,59 @@ db/                 schema.sql and the SQLite file (railway.db, gitignored)
 
 ## How to run
 
-TODO — filled in by SETUP-06 (backend) and SETUP-07 (frontend).
+### Prerequisites
 
-- Backend: TODO
-- Frontend: TODO
-- Seed database: TODO
+- Node.js and npm
+- Run these commands from the repository root.
+
+### First-time setup
+
+Install backend and frontend dependencies:
+
+```powershell
+npm --prefix backend install
+npm --prefix frontend install
+```
+
+The backend needs `JWT_SECRET` for login and authenticated requests. If
+`backend/.env` does not already exist, copy `backend/.env.example` to
+`backend/.env` and replace the example value with a private development secret.
+Keep `.env` local; it is ignored by Git.
+
+A fresh checkout also needs a database schema and sample data. To initialize a
+disposable development database, run:
+
+```powershell
+npm --prefix backend run seed
+```
+
+**Warning:** seeding deletes all existing bookings, train classes, and trains
+before inserting sample data. Do not run it against a database whose data you
+need to keep.
+
+### Start the app
+
+1. In a terminal at the repository root, start the backend and leave it running:
+
+   ```powershell
+   npm --prefix backend run dev
+   ```
+
+   The API listens on `http://localhost:4000`.
+
+2. Open a second terminal at the repository root, start the frontend, and leave
+   it running:
+
+   ```powershell
+   npm --prefix frontend run dev
+   ```
+
+   Vite prints the local frontend URL, normally `http://localhost:5173`.
+
+3. Open the printed frontend URL in a browser. The backend health check is
+   available at `http://localhost:4000/health` and should return
+   `{"status":"ok"}`.
+
+Keep both terminals running during a demo. If either process exits, restart it
+with its command above. Stop a server with `Ctrl+C` in its own terminal when
+you are finished.
