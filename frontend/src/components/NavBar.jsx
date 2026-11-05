@@ -1,11 +1,21 @@
 ﻿import { Link, useNavigate } from 'react-router-dom';
 
+function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user'));
+  } catch {
+    return null;
+  }
+}
+
 export default function NavBar() {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const isAdmin = Boolean(token) && getUser()?.role === 'admin';
 
   function handleLogout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login');
   }
 
@@ -24,9 +34,14 @@ export default function NavBar() {
           <Link to="/register">Register</Link>
         </>
       )}
-      
+
       <Link to="/pnr">PNR Lookup</Link>
-      <Link to="/admin/trains">Admin Trains</Link>
+      {isAdmin && (
+        <>
+          <Link to="/admin/trains">Admin Trains</Link>
+          <Link to="/admin/bookings">Admin Bookings</Link>
+        </>
+      )}
     </nav>
   );
 }

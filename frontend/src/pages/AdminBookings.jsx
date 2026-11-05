@@ -1,12 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api';
 import './Bookings.css';
 
 export default function AdminBookings() {
   const [trainId, setTrainId] = useState('');
+  const [trains, setTrains] = useState([]);
   const [bookings, setBookings] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    api('/admin/trains')
+      .then((data) => {
+        if (!cancelled) setTrains(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'Unable to load trains.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -27,19 +42,22 @@ export default function AdminBookings() {
   return (
     <main className="bookings-page">
       <h1>Admin Bookings</h1>
-      <p>The train picker depends on the team deciding on an admin train-list endpoint.</p>
       <form className="pnr-form" onSubmit={handleSubmit}>
-        <label htmlFor="admin-bookings-train-id">Train ID</label>
+        <label htmlFor="admin-bookings-train-id">Train</label>
         <div className="pnr-form__row">
-          <input
+          <select
             id="admin-bookings-train-id"
-            type="number"
-            min="1"
-            step="1"
             value={trainId}
             onChange={(event) => setTrainId(event.target.value)}
             required
-          />
+          >
+            <option value="">Choose a train</option>
+            {trains.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.number} - {t.name} ({t.source} to {t.destination}, {t.travelDate})
+              </option>
+            ))}
+          </select>
           <button type="submit" disabled={loading}>
             {loading ? 'Loading...' : 'View bookings'}
           </button>
