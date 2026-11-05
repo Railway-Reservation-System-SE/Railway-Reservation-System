@@ -23,6 +23,10 @@ frontend/           React + Vite app
 db/                 schema.sql and the SQLite file (railway.db, gitignored)
 .github/workflows/  CI (GitHub Actions)
 ```
+## HTTPS and demo scope
+ * This demo runs only on localhost over HTTP.
+* Not enabling HTTPS is an intentional exception for this local demo, not a claim that localhost can't use HTTPS.
+* An online deployment would need HTTPS configured and verified.
 
 ## How to run
 
