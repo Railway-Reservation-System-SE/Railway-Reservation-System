@@ -88,9 +88,9 @@ HTTP Status: 200 | Response Time: 0.005213s
 # QA-REGRESSION - Full STP regression pass (Issue #42)
 
 **Requirement:** All TC-* test cases from the STP (traceability per SRS Section 8 RTM), plus the STP Section 5.1 security checks
-**Test date:** 07-11-2026
+**Test date:** 09-11-2026 (rerun after the runner fixes listed under Notes; original pass 07-11-2026)
 **Environment:** Local development server (`http://localhost:4000`), seeded disposable database (`npm --prefix backend run seed`)
-**Build under test:** `dev` branch, commit `9bae85b` (head after PR #82 merge, 05-11-2026)
+**Build under test:** `dev` branch app code at commit `9bae85b` (head after PR #82 merge, 05-11-2026; unchanged on this branch, which only adds test tooling). Executed from branch `chore/qa-regression-log`.
 **Method:** Every case executed against the running app over HTTP by the scripted runner `backend/scripts/qa-regression.mjs`, with results cross-checked against the SQLite database. The automated Jest + Supertest suite (186 tests, 22 suites) was also run on the same commit: all passed.
 
 ## Results
@@ -133,14 +133,14 @@ HTTP Status: 200 | Response Time: 0.005213s
 - **TC-Auth-01** (PASS): correct=200 token, wrong=401
 - **TC-Auth-02** (PASS): no token=401, malformed token=401 (JWT logout is client-side token discard)
 - **TC-Auth-03** (PASS): reset=200, old pw login=401, new pw login=200
-- **TC-Search-01** (PASS): status=200, found 12007 Shatabdi=true on 2026-11-10
+- **TC-Search-01** (PASS): status=200, found 12007 Shatabdi=true on 2026-11-12
 - **TC-Search-02** (PASS): db=[["SL",80],["3A",50],["2A",25]] api=[["SL",80],["3A",50],["2A",25]]
 - **TC-Fare-01** (PASS): db fares=[["SL",300],["3A",850],["2A",1200]] api=[["SL",300],["3A",850],["2A",1200]]
 - **TC-Book-01** (PASS): 0 pax=400, 5 pax=400
 - **TC-Book-02** (PASS): 6x4pax=201/201/201/201/201/201, 4-over-1-remaining=409 (Not enough seats available), last seat=201, beyond full=409, db booked=25/25
 - **TC-Integrity-01** (PASS): class capped at 25/25; extra booking rejected 409; concurrency covered by Jest overbooking.test.js
 - **TC-Pay-01** (PASS): invalid method=400, seats unchanged 0->0 (gateway is simulated: any of card/upi/netbanking succeeds)
-- **TC-Pay-02** (PASS): status=201, pnr=3333916275, seats 0->2
+- **TC-Pay-02** (PASS): status=201, pnr=7386449820, seats 0->2
 - **TC-PNR-01** (PASS): valid=200 status=CONFIRMED, invalid=400
 - **TC-History-01** (PASS): api count=8, db count=8, desc order=true
 - **TC-Cancel-01** (PASS): http=200, db status=CANCELLED
@@ -149,7 +149,7 @@ HTTP Status: 200 | Response Time: 0.005213s
 - **TC-Admin-01** (PASS): add=201, search finds 16525=true
 - **TC-Admin-02** (PASS): update=200 shown=true, delete=200 removed from search=true
 - **TC-Admin-03** (PASS): api confirmed=7, db confirmed=7
-- **TC-Perf-01** (PASS): times(ms)=0.975, 0.922, 0.912, 0.903, 1.256, avg=0.994 (sequential, local dev server)
+- **TC-Perf-01** (PASS): times(ms)=0.922, 0.869, 0.823, 0.818, 1.214, avg=0.929 (sequential, local dev server)
 - **TC-UX-01** (NOT RUN): NOT RUN by agent: requires a first-time human user walkthrough; teammate acceptance walkthrough still outstanding
 - **SR-001** (PASS): hash prefix=$2b$10$... (bcrypt)
 - **SR-002** (PASS): booking no-token=401, admin no-token=401
@@ -163,5 +163,12 @@ HTTP Status: 200 | Response Time: 0.005213s
 - **SR-005 (HTTPS)** is a documented demo-scope exception, not a pass: this demo runs on localhost over HTTP only (see README "HTTPS and demo scope"). HTTPS was not verified; it would need a real deployment.
 - **TC-Pay-01**: the payment step is a simulated gateway - any of `card`, `upi` or `netbanking` counts as success. The negative path was verified with an unsupported method (`cheque`): booking rejected with HTTP 400 and no seat was taken.
 - **TC-Auth-02**: logout discards the JWT client-side; the API correctly rejects requests with no token or a malformed token (HTTP 401). Issued tokens remain valid until their 2-hour expiry (stateless JWT, no server-side revocation).
-- **TC-Perf-01**: 5 sequential requests to `GET /trains/search`, all HTTP 200, avg 1.009 ms, max 1.289 ms - well under the 3-second threshold. As with the earlier 03-11-2026 run, this is a basic response-time check on a local server, not a concurrent load test.
-- No defects were found in this pass, so no `type:bug` issues or `fix/*` branches were raised (issue #42 step 2).
+- **TC-Perf-01**: 5 sequential requests to `GET /trains/search`, all HTTP 200, avg 0.929 ms, max 1.214 ms (matching the evidence above) - well under the 3-second threshold. As with the earlier 03-11-2026 run, this is a basic response-time check on a local server, not a concurrent load test.
+- No defects were found in the app in this pass, so no `type:bug` issues or `fix/*` branches were raised (issue #42 step 2).
+
+## Runner fixes (09-11-2026, after review)
+
+- **Database path:** the runner now reads the same database as the app and seed - `db/railway.db` at the repo root (it previously read the non-existent `backend/db/railway.db`, which crashed the pass at TC-Search-02 on a fresh checkout). It also honors the `DATABASE_PATH` environment variable, matching `src/db.js`.
+- **Repeat runs:** the runner snapshots the database before the pass and restores it after the server exits, so it leaves no test data behind and a repeat run needs no reseeding. For a completely fresh pass instead, reset first: `rm db/railway.db && npm --prefix backend run seed`.
+- **Result labels:** cases not run (TC-UX-01, SR-005) now print as `NOT-RUN` in the per-case output; the summary counts were already correct.
+- Verified 09-11-2026 on a fresh seeded checkout: 25 PASS / 0 FAIL / 2 NOT-RUN, identical on an immediate repeat run and with `DATABASE_PATH` pointed at a copied database. The automated Jest + Supertest suite (186 tests, 22 suites) also passes on the same commit.

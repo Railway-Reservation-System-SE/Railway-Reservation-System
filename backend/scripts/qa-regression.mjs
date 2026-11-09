@@ -6,16 +6,34 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 
+import os from 'node:os';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BASE = 'http://localhost:4000';
-const dbPath = path.join(__dirname, '..', 'db', 'railway.db');
-import os from 'node:os';
+// Same database the app and seed use: <repo root>/db/railway.db (see src/db.js),
+// overridable with DATABASE_PATH exactly like the app.
+const dbPath =
+  process.env.DATABASE_PATH ||
+  path.join(__dirname, '..', '..', 'db', 'railway.db');
 const serverLogPath = path.join(os.tmpdir(), 'rrs-server.log');
+
+if (!fs.existsSync(dbPath)) {
+  console.error(`Database not found at ${dbPath}. Seed it first: npm --prefix backend run seed`);
+  process.exit(1);
+}
+
+// Snapshot the seeded database so this run leaves no test data behind and a
+// repeat run starts from the same state (restored in the finally block once
+// the server has exited). For a completely fresh pass instead, reseed first:
+//   rm db/railway.db && npm --prefix backend run seed
+const backupPath = `${dbPath}.qa-backup`;
+fs.copyFileSync(dbPath, backupPath);
 
 const results = [];
 function record(id, name, pass, evidence) {
   results.push({ id, name, pass, evidence });
-  console.log(`${pass ? 'PASS' : 'FAIL'} ${id}: ${name}`);
+  const label = pass === null ? 'NOT-RUN' : pass ? 'PASS' : 'FAIL';
+  console.log(`${label} ${id}: ${name}`);
 }
 const j = (r) => r.json().catch(() => ({}));
 function req(method, url, { token, body } = {}) {
@@ -40,6 +58,7 @@ function datePlus(days) {
 fs.rmSync(serverLogPath, { force: true });
 const serverLog = fs.openSync(serverLogPath, 'w');
 const server = spawn('node', ['src/index.js'], {
+  cwd: path.join(__dirname, '..'),
   env: { ...process.env, PORT: '4000', JWT_SECRET: 'qa-regression-secret' },
   stdio: ['ignore', serverLog, serverLog],
 });
@@ -252,6 +271,7 @@ try {
 
   // Security checks (STP 5.1 / SRS SR-001..005)
   const hashRow = dbc.prepare(`SELECT password_hash FROM users WHERE email=?`).get(email);
+  dbc.close();
   record('SR-001', 'Passwords stored hashed, not plaintext', /^\$2[aby]\$/.test(hashRow.password_hash),
     `hash prefix=${hashRow.password_hash.slice(0, 7)}... (bcrypt)`);
   r = await req('POST', '/bookings', { body: { trainId: train12627.id, classType: 'SL', travelDate: datePlus(1), passengers: pax(1), paymentMethod: 'upi' } });
@@ -282,4 +302,15 @@ try {
   fs.writeFileSync(path.join(os.tmpdir(), 'regression-results.json'), JSON.stringify({ stamp, results }, null, 2));
 } finally {
   server.kill();
+  await new Promise((resolve) => {
+    const t = setTimeout(resolve, 3000);
+    server.once('exit', () => { clearTimeout(t); resolve(); });
+  });
+  // Restore the pre-run database so reruns start from the same seeded state.
+  try {
+    fs.copyFileSync(backupPath, dbPath);
+    for (const suffix of ['-wal', '-shm', '-journal']) fs.rmSync(dbPath + suffix, { force: true });
+  } finally {
+    fs.rmSync(backupPath, { force: true });
+  }
 }
