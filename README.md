@@ -86,3 +86,17 @@ need to keep.
 Keep both terminals running during a demo. If either process exits, restart it
 with its command above. Stop a server with `Ctrl+C` in its own terminal when
 you are finished.
+
+## Seeded demo accounts
+
+After `npm --prefix backend run seed`, the database contains one admin account
+for demo purposes:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@rrs.test | admin123 |
+
+Passenger accounts are created through the register page. Seeding resets all
+trains, classes and bookings, and seeded trains use travel dates relative to
+the current day so the search page always has bookable trains.
+
