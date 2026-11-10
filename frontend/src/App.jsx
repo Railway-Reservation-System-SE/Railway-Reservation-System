@@ -1,6 +1,6 @@
-﻿
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
+import Home from './pages/Home';
 import Search from './pages/Search';
 import Register from './pages/Register';
 import Login from './pages/Login';
@@ -9,15 +9,6 @@ import MyBookings from './pages/MyBookings';
 import PnrLookup from './pages/PnrLookup';
 import AdminTrains from './pages/AdminTrains';
 import AdminBookings from './pages/AdminBookings';
-
-function Placeholder({ title }) {
-  return (
-    <section className="page">
-      <h1>{title}</h1>
-      <p>This page is part of the Railway Reservation System.</p>
-    </section>
-  );
-}
 
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -50,7 +41,7 @@ export default function App() {
     <BrowserRouter>
       <NavBar />
       <Routes>
-        <Route path="/" element={<Placeholder title="Home" />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/search" element={<Search />} />
