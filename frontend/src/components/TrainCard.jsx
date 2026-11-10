@@ -1,7 +1,12 @@
-
 import { Link } from 'react-router-dom';
 import { buildBookingUrl } from '../utils/bookingUrl';
 import './TrainCard.css';
+
+function seatsClass(seatsAvailable) {
+  if (seatsAvailable <= 0) return 'train-class__seats--none';
+  if (seatsAvailable <= 10) return 'train-class__seats--low';
+  return '';
+}
 
 export default function TrainCard({ train, date }) {
   return (
@@ -24,8 +29,10 @@ export default function TrainCard({ train, date }) {
           >
             <div>
               <h3>{trainClass.class_name}</h3>
-              <p>Fare: ₹{Number(trainClass.fare).toLocaleString('en-IN')}</p>
-              <p>Seats available: {trainClass.seatsAvailable}</p>
+              <p className="train-class__fare">Fare: ₹{Number(trainClass.fare).toLocaleString('en-IN')}</p>
+              <p className={seatsClass(trainClass.seatsAvailable)}>
+                Seats available: {trainClass.seatsAvailable}
+              </p>
             </div>
 
             <Link

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import './Admin.css';
 
 const EMPTY_TRAIN = {
   number: '',
@@ -115,7 +116,7 @@ export default function AdminTrains() {
   }
 
   return (
-    <main className="page">
+    <main className="page admin-page">
       <h1>Admin Trains</h1>
       <p><Link to="/admin/bookings">View bookings by train</Link></p>
 
