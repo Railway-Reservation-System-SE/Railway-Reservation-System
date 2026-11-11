@@ -2,14 +2,14 @@
 
 This ticket implements backend endpoints only. No email service is connected and no email is sent. A known account's reset request logs a link to the local server console, as specified in the execution plan. This is a documented deviation from the SRS emailed-link flow and must be explained in the demo.
 
-The printed `http://localhost:5173/reset-password?token=...` link carries the token, but this project currently has no reset-password frontend form. Complete the reset using the API, not by claiming that clicking the link finishes the UI flow. Do not expose these server logs publicly; reset links are temporary credentials.
+The printed `http://localhost:5173/reset-password?token=...` link opens the frontend reset-password page, which reads the token from the URL and calls `POST /auth/reset-password`. After a successful reset it redirects to the login page with a "Password updated" message. Reset links are temporary credentials, so do not expose server logs publicly.
 
 ## Local walkthrough with disposable data
 
 1. Start the backend with a configured JWT_SECRET and initialized disposable SQLite database.
 2. Register a test account via POST /auth/register.
 3. POST /auth/request-password-reset with its email. Both known and unknown accounts receive the same200 response; tokens are never returned in JSON.
-4. Read the locally logged reset link and use its token in POST /auth/reset-password with a new password.
+4. Read the locally logged reset link and open it in the browser (or use its token in POST /auth/reset-password). Enter and confirm a new password on the page.
 5. The reset returns200; login with the new password returns200 and the old one returns401.
 6. Tampering with the token or using one past its15-minute expiry returns400. A normal session JWT also returns400.
 
