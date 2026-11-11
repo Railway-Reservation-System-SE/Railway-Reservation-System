@@ -115,3 +115,5 @@ the current day so the search page always has bookable trains.
   response-time requests on a local server, not a concurrent load test.
 - **Usability (RRS-NF-002 / TC-UX-01):** the first-time-user walkthrough is
   done in person during the demo/evaluation rather than in automated tests.
+- **Admin train list (UI-ADMIN):** `GET /admin/trains` was added so the admin page can list trains; it is not in the original SRS/SAD API table.
+- **Deleting a train (RRS-F-051):** a train with CONFIRMED bookings cannot be deleted (409). Deleting a train whose bookings are all CANCELLED also deletes those cancelled booking records.- **Admin train list (UI-ADMIN):** `GET /admin/trains` was added so the admin page can list trains; it is not in the original SRS/SAD API table.
