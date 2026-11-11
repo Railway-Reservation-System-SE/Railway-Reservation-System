@@ -3,6 +3,7 @@ import NavBar from './components/NavBar';
 import Home from './pages/Home';
 import Search from './pages/Search';
 import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
 import Login from './pages/Login';
 import Booking from './pages/Booking';
 import MyBookings from './pages/MyBookings';
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/search" element={<Search />} />
         <Route path="/booking/:trainId" element={<Booking />} />
         <Route path="/bookings" element={<MyBookings />} />
