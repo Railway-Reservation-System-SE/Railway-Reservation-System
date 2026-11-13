@@ -1,0 +1,92 @@
+.train-card {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  margin-bottom: 18px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.train-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, #2563eb, #f59e0b);
+}
+
+.train-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.train-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.train-card__header h2 { margin: 0; font-size: 1.2rem; }
+.train-card__number { margin: 4px 0 0; color: var(--color-muted); font-size: 0.9rem; }
+
+.train-card__route {
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.train-card__classes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.train-class {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  background: #fbfcfe;
+}
+
+.train-class h3 { margin: 0 0 4px; font-size: 1rem; }
+.train-class p { margin: 2px 0; font-size: 0.9rem; color: var(--color-muted); }
+
+.train-class__fare { font-weight: 700; color: var(--color-text) !important; }
+
+.train-class__seats--low { color: #b45309 !important; font-weight: 700; }
+.train-class__seats--none { color: var(--color-danger) !important; font-weight: 700; }
+
+.train-class__book {
+  display: inline-block;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.train-class__book:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(29, 78, 216, 0.38);
+  text-decoration: none;
+}
