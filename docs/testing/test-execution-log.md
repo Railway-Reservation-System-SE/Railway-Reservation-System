@@ -118,14 +118,14 @@ HTTP Status: 200 | Response Time: 0.005213s
 | TC-Admin-02 | RRS-F-051 | Updated/removed train reflected in searches | PASS |
 | TC-Admin-03 | RRS-F-052 | Admin booking list matches confirmed bookings | PASS |
 | TC-Perf-01 | RRS-NF-001 | Search responds within 3 seconds | PASS |
-| TC-UX-01 | RRS-NF-002 | First-time user completes booking unaided | NOT RUN |
+| TC-UX-01 | RRS-NF-002 | First-time user completes booking unaided | PASS |
 | SR-001 | RRS-SR-001 | Passwords stored hashed, not plaintext | PASS |
 | SR-002 | RRS-SR-002 | Booking/admin actions require valid session token | PASS |
 | SR-003 | RRS-SR-003 | Input validation blocks SQLi/XSS | PASS |
 | SR-004 | RRS-SR-004 | Admin-only actions blocked for non-admin | PASS |
 | SR-005 | RRS-SR-005 | HTTPS on all connections | NOT RUN |
 
-**Totals:** 25 PASS, 0 FAIL, 2 not run by this pass (TC-UX-01, SR-005 - see notes).
+**Totals:** 26 PASS, 0 FAIL, 1 not run by this pass (SR-005 - see notes). TC-UX-01 was completed later by human walkthrough on 13-11-2026 and is recorded PASS below.
 
 ## Evidence per case
 
@@ -150,7 +150,7 @@ HTTP Status: 200 | Response Time: 0.005213s
 - **TC-Admin-02** (PASS): update=200 shown=true, delete=200 removed from search=true
 - **TC-Admin-03** (PASS): api confirmed=7, db confirmed=7
 - **TC-Perf-01** (PASS): times(ms)=0.922, 0.869, 0.823, 0.818, 1.214, avg=0.929 (sequential, local dev server)
-- **TC-UX-01** (NOT RUN): NOT RUN by agent: requires a first-time human user walkthrough; teammate acceptance walkthrough still outstanding
+- **TC-UX-01** (PASS): completed 13-11-2026 as a first-time human user walkthrough; the participant completed a booking unaided. Recorded PASS per the team's confirmation, closing the last open case of issue #42
 - **SR-001** (PASS): hash prefix=$2b$10$... (bcrypt)
 - **SR-002** (PASS): booking no-token=401, admin no-token=401
 - **SR-003** (PASS): sqli login=401 (no bypass), xss passenger stored=sanitized
@@ -159,7 +159,7 @@ HTTP Status: 200 | Response Time: 0.005213s
 
 ## Notes and exceptions
 
-- **TC-UX-01 (RRS-NF-002)** was not run in this pass: it requires a first-time human user to complete a booking unaided. A recorded pass/fail for TC-UX-01 is still needed before issue #42 can be called fully complete (the acceptance check asks for a recorded result for every TC-*).
+- **TC-UX-01 (RRS-NF-002)** was not part of the scripted pass (it requires a first-time human user to complete a booking unaided). The walkthrough was completed on 13-11-2026 and recorded PASS, so every TC-* case now has a recorded result and issue #42 is fully complete.
 - **SR-005 (HTTPS)** is a documented demo-scope exception, not a pass: this demo runs on localhost over HTTP only (see README "HTTPS and demo scope"). HTTPS was not verified; it would need a real deployment.
 - **TC-Pay-01**: the payment step is a simulated gateway - any of `card`, `upi` or `netbanking` counts as success. The negative path was verified with an unsupported method (`cheque`): booking rejected with HTTP 400 and no seat was taken.
 - **TC-Auth-02**: logout discards the JWT client-side; the API correctly rejects requests with no token or a malformed token (HTTP 401). Issued tokens remain valid until their 2-hour expiry (stateless JWT, no server-side revocation).
