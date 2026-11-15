@@ -23,6 +23,14 @@ frontend/           React + Vite app
 db/                 schema.sql and the SQLite file (railway.db, gitignored)
 .github/workflows/  CI (GitHub Actions)
 ```
+## Documentation
+
+- `SRS_Railway_Reservation_System.pdf` - Software Requirements Specification (IEEE format, 19 FRs, 5 NFRs, security objectives/requirements, UML use-case diagrams, RTM)
+- `SAD_Railway_Reservation_System.pdf` - Software Architecture & Design (component diagram, layered pattern, STRIDE security architecture, 2 UML sequence diagrams, API design, error handling)
+- `STP_Railway_Reservation_System.pdf` - Software Test Plan v1.1 (IEEE format; Appendix A lists all 27 test cases covering FRs and NFRs)
+- `docs/testing/` - final testing reports: unit, system validation, code coverage, branch coverage, and the full execution log
+- `docs/1-sprint1-demo.mp4`, `docs/2-sprint2-demo.mp4` - Sprint 1 and Sprint 2 demo videos
+
 ## HTTPS and demo scope
  * This demo runs only on localhost over HTTP.
 * Not enabling HTTPS is an intentional exception for this local demo, not a claim that localhost can't use HTTPS.
